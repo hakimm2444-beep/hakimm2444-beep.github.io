@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hkmmz Portofolio | TJKT</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Input File Tersembunyi -->
+    <input type="file" id="input-avatar" accept="image/*" hidden>
+    <input type="file" id="input-bg" accept="image/*" hidden>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-network-wired edit-icon" data-icon="brandIcon"></i>
+            <span class="editable" data-key="brandName">HKMZZPORTFOLIO</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#beranda">Beranda</a></li>
+            <li><a href="#tentang">Profil</a></li>
+            <li><a href="#keahlian">Skill</a></li>
+            <li><a href="#proyek">Galeri</a></li>
+            <li><a href="#kontak">Kontak</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="beranda" class="hero">
+        <div id="hero-bg" class="hero-bg"></div>
+        <canvas id="network-canvas"></canvas>
+        <div class="hero-overlay"></div>
+
+        <button class="edit-only btn-floating-top" onclick="document.getElementById('input-bg').click()">
+            <i class="fas fa-image"></i> Ganti Latar Belakang
+        </button>
+
+        <div class="hero-card reveal">
+            <div class="status-badge">
+                <span class="pulse-dot"></span>
+                <span class="editable" data-key="statusText">READY FOR ASSESSMENT & PKL</span>
+            </div>
+
+            <div class="avatar-wrapper">
+                <img id="profile-img" src="" alt="Foto Profil">
+                <button class="edit-only btn-upload-avatar" onclick="document.getElementById('input-avatar').click()">
+                    <i class="fas fa-camera"></i>
+                </button>
+            </div>
+
+            <h1 class="editable" data-key="fullName">Hakimmmz</h1>
+            <p class="role-prefix">&gt; <span id="typing-text" class="editable" data-key="roleText">Siap Belajar</span><span class="cursor">|</span></p>
+            
+            <p class="hero-bio editable" data-key="shortBio">
+                Siswa SMK Jurusan TJKT (Teknik Jaringan Komputer & Telekomunikasi). Berpengalaman dalam perakitan serta pengujian sistem PC, perancangan simulasi IoT, serta konfigurasi jaringan dasar.
+            </p>
+
+            <div class="hero-actions">
+                <a href="#proyek" class="btn-primary"><i class="fas fa-folder-open"></i> Lihat Proyek</a>
+                <a href="#kontak" class="btn-outline"><i class="fas fa-paper-plane"></i> Kontak</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tentang -->
+    <section id="tentang" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">// 01. TENTANG SAYA</span>
+                <h2 class="editable" data-key="titleTentang">Profil & Fokus Kompetensi</h2>
+            </div>
+            <div class="about-grid reveal">
+                <div class="glass-card about-text">
+                    <h3 class="editable" data-key="subTentang">Ringkasan Diri</h3>
+                    <p class="editable" data-key="descTentang">Saya terbiasa melakukan praktik teknis seperti perakitan PC, instalasi sistem operasi, konfigurasi jaringan MikroTik/Linux, hingga pengembangan simulasi perangkat mikrokontroler.</p>
+                </div>
+                <div class="glass-card terminal-box">
+                    <div class="terminal-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="terminal-title editable" data-key="terminalTitle">Informasi Siswa</span>
+                    </div>
+                    <div class="terminal-body">
+                        <p><span class="cmd">$ sekolah:</span> <span class="editable" data-key="school">SMK Negeri 5 Sukoharjo</span></p>
+                        <p><span class="cmd">$ jurusan:</span> <span class="editable" data-key="major">TJKT</span></p>
+                        <p><span class="cmd">$ sertifikasi:</span> <span class="editable" data-key="cert">Uji Kompetensi Keahlian</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Keahlian -->
+    <section id="keahlian" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">// 02. KEAHLIAN TEKNIS</span>
+                <h2 class="editable" data-key="titleSkill">Kompetensi Utama</h2>
+            </div>
+            <div class="skills-grid reveal">
+                <div class="glass-card skill-card hover-tilt">
+                    <div class="skill-icon"><i class="fas fa-network-wired edit-icon" data-icon="iconSkill1"></i></div>
+                    <h3 class="editable" data-key="skill1">Routing & Switching</h3>
+                    <p class="editable" data-key="descSkill1">Konfigurasi MikroTik, VLAN, Hotspot, Manajemen Bandwidth, dan simulasi jaringan.</p>
+                </div>
+                <div class="glass-card skill-card hover-tilt">
+                    <div class="skill-icon"><i class="fas fa-server edit-icon" data-icon="iconSkill2"></i></div>
+                    <h3 class="editable" data-key="skill2">Linux Server Admin</h3>
+                    <p class="editable" data-key="descSkill2">Instalasi Debian/Ubuntu Server, DNS Server, DHCP, Web Server, dan SSH.</p>
+                </div>
+                <div class="glass-card skill-card hover-tilt">
+                    <div class="skill-icon"><i class="fas fa-microchip edit-icon" data-icon="iconSkill3"></i></div>
+                    <h3 class="editable" data-key="skill3">Hardware & IoT</h3>
+                    <p class="editable" data-key="descSkill3">Perakitan PC, troubleshooting perangkat keras, crimping UTP, serta simulasi mikrokontroler.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Proyek & Galeri -->
+    <section id="proyek" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">// 03. GALERI & SERTIFIKAT</span>
+                <h2 class="editable" data-key="titleProject">Dokumentasi Praktikum</h2>
+                <button class="edit-only btn-primary" style="margin-top: 15px;" onclick="document.getElementById('modal-proyek').classList.add('active')">
+                    <i class="fas fa-plus"></i> Tambah Foto / Proyek
+                </button>
+            </div>
+            <div class="projects-grid reveal" id="projects-grid"></div>
+        </div>
+    </section>
+
+    <!-- Footer / Kontak -->
+    <footer id="kontak" class="footer">
+        <div class="container reveal">
+            <span class="section-tag">// 04. HUBUNGI SAYA</span>
+            <h2 class="editable" data-key="footerTitle">Siap Mengikuti Asesmen & PKL</h2>
+            <p class="footer-hint">Ketuk kartu kontak di bawah untuk menyalin otomatis</p>
+            <div class="contact-cards">
+                <div class="glass-card contact-item hover-tilt" onclick="copyContact(this)">
+                    <i class="fas fa-envelope edit-icon" data-icon="iconContact1"></i>
+                    <span class="contact-text editable" data-key="email">emailkamu@gmail.com</span>
+                    <i class="fas fa-copy copy-badge"></i>
+                </div>
+                <div class="glass-card contact-item hover-tilt" onclick="copyContact(this)">
+                    <i class="fab fa-whatsapp edit-icon" data-icon="iconContact2"></i>
+                    <span class="contact-text editable" data-key="whatsapp">+62 812-3456-7890</span>
+                    <i class="fas fa-copy copy-badge"></i>
+                </div>
+                <div class="glass-card contact-item hover-tilt" onclick="copyContact(this)">
+                    <i class="fab fa-github edit-icon" data-icon="iconContact3"></i>
+                    <span class="contact-text editable" data-key="github">github.com/username</span>
+                    <i class="fas fa-copy copy-badge"></i>
+                </div>
+            </div>
+            <p class="editable" data-key="copyrightText" style="margin-top:40px; font-size:13px; color:var(--text-muted);">&copy; 2026 TJKT Hkmmz Portofolio</p>
+        </div>
+    </footer>
+
+    <!-- Modal Pilih Ikon -->
+    <div id="modal-ikon" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>Pilih Ikon Baru</h3>
+                <button class="close-modal" onclick="this.closest('.modal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="icon-grid" id="icon-grid"></div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Proyek -->
+    <div id="modal-proyek" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3><i class="fas fa-cloud-upload-alt"></i> Tambah Proyek</h3>
+                <button class="close-modal" onclick="this.closest('.modal').classList.remove('active')">&times;</button>
+            </div>
+            <form id="form-proyek">
+                <label>Foto Proyek / Sertifikat</label>
+                <input type="file" id="proj-img" accept="image/*" required>
+                <label>Judul Proyek</label>
+                <input type="text" id="proj-title" placeholder="Contoh: Konfigurasi Hotspot MikroTik" required>
+                <label>Kategori</label>
+                <input type="text" id="proj-tag" placeholder="Contoh: MIKROTIK" required>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 15px;">Simpan Proyek</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- UI Mode Edit -->
+    <button id="toggle-edit-btn" class="floating-edit-btn" onclick="toggleEditMode()">
+        <i class="fas fa-sliders-h"></i> <span>Mode Edit</span>
+    </button>
+    <div id="edit-toolbar" class="edit-toolbar">
+        <div class="toolbar-info"><i class="fas fa-pen"></i> Mode Edit Aktif</div>
+        <div class="toolbar-actions">
+            <button onclick="cycleTheme()" class="tool-btn"><i class="fas fa-palette"></i> Tema</button>
+            <button onclick="saveData()" class="tool-btn save"><i class="fas fa-save"></i> Simpan</button>
+            <button onclick="resetData()" class="tool-btn danger"><i class="fas fa-undo"></i> Reset</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Berhasil!</div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
