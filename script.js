@@ -5,14 +5,28 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 // =========================================================================
 // 1. KONFIGURASI FIREBASE (Isi dengan firebaseConfig dari Project Settings)
 // =========================================================================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "TEMPEL_API_KEY_KAMU_DISINI",
-    authDomain: "TEMPEL_AUTH_DOMAIN_KAMU_DISINI",
-    projectId: "TEMPEL_PROJECT_ID_KAMU_DISINI",
-    storageBucket: "TEMPEL_STORAGE_BUCKET_KAMU_DISINI",
-    messagingSenderId: "TEMPEL_MESSAGING_SENDER_ID_KAMU_DISINI",
-    appId: "TEMPEL_APP_ID_KAMU_DISINI"
+  apiKey: "AIzaSyD6DrR07nH8X_qRlgb7le0RgVPrDgh8nTM",
+  authDomain: "hkmmportofolio.firebaseapp.com",
+  projectId: "hkmmportofolio",
+  storageBucket: "hkmmportofolio.firebasestorage.app",
+  messagingSenderId: "51493725276",
+  appId: "1:51493725276:web:13631b17d2967512d47299",
+  measurementId: "G-D7FZBPB1RN"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
 
 let auth = null;
 let firestore = null;
