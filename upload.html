@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Dokumen & Lampiran</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .upload-container {
+      background: #ffffff;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 500px;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    h2 {
+      margin-top: 0;
+      color: #222;
+      font-size: 1.35rem;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #333;
+      font-size: 0.92rem;
+    }
+    .hint {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 4px;
+    }
+    select, input[type="file"], input[type="url"], textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .drop-zone {
+      border: 2px dashed #4a90e2;
+      border-radius: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      background-color: #f8fbff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      background-color: #ebf3fc;
+    }
+    .drop-zone p {
+      margin: 0;
+      color: #4a90e2;
+      font-weight: 500;
+    }
+    #fileList {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #2c3e50;
+      list-style: none;
+      padding-left: 0;
+    }
+    #fileList li {
+      background: #eef2f5;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button[type="submit"]:hover {
+      background-color: #1d4ed8;
+    }
+    .hidden {
+      display: none;
+    }
+    .result-box {
+      margin-top: 20px;
+      padding: 14px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #065f46;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+
+<div class="upload-container">
+  <!-- Link Kembali ke Halaman Utama -->
+  <a href="index.html" class="back-link">← Kembali ke Beranda</a>
+
+  <h2>Upload Dokumen & Lampiran</h2>
+  <form id="uploadForm">
+    
+    <!-- Opsi Pilihan Metode Upload -->
+    <div class="form-group">
+      <label for="uploadMethod">Pilih Opsi Upload</label>
+      <select id="uploadMethod">
+        <option value="device">1. Upload File dari Perangkat (Bisa Banyak File)</option>
+        <option value="dragdrop">2. Drag & Drop (Tarik & Lepas File)</option>
+        <option value="cloud">3. Lampirkan Tautan Cloud (Google Drive / OneDrive)</option>
+      </select>
+    </div>
+
+    <!-- Opsi 1: Input File Standar -->
+    <div class="form-group" id="deviceUploadGroup">
+      <label for="fileInput">Pilih File Dokumen</label>
+      <input 
+        type="file" 
+        id="fileInput" 
+        name="files[]" 
+        multiple 
+        accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.jpg,.jpeg,.png"
+      >
+      <div class="hint">Mendukung format: PDF, PPT, PPTX, DOC, DOCX, XLS, XLSX, ZIP, Gambar, dll.</div>
+    </div>
+
+    <!-- Opsi 2: Drag & Drop Area -->
+    <div class="form-group hidden" id="dragDropGroup">
+      <label>Tarik & Lepas File ke Kotak Ini</label>
+      <div class="drop-zone" id="dropZone">
+        <p>Seret file PDF, PPT, Word, dll. ke sini atau klik untuk memilih</p>
+        <input 
+          type="file" 
+          id="dropFileInput" 
+          multiple 
+          accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.jpg,.jpeg,.png"
+          class="hidden"
+        >
+      </div>
+    </div>
+
+    <!-- Opsi 3: Input Link Cloud Khusus -->
+    <div class="form-group hidden" id="cloudLinkGroup">
+      <label for="cloudUrl">Tautan File Cloud (Opsional jika ukuran file besar)</label>
+      <input type="url" id="cloudUrl" placeholder="https://drive.google.com/file/d/...">
+    </div>
+
+    <!-- Daftar File Terpilih -->
+    <ul id="fileList"></ul>
+
+    <!-- Kolom Tambahan: Deskripsi untuk Menempelkan Link -->
+    <div class="form-group">
+      <label for="linkDescription">Deskripsi & Tempelkan Link (URL)</label>
+      <textarea 
+        id="linkDescription" 
+        name="linkDescription" 
+        placeholder="Tempelkan link referensi, link presentasi, atau catatan tambahan di sini...&#10;Contoh: https://contoh-link.com/materi-presentasi"
+      ></textarea>
+      <div class="hint">Anda dapat menempelkan satu atau lebih link beserta keterangannya di kolom ini.</div>
+    </div>
+
+    <button type="submit">Kirim & Simpan Data</button>
+  </form>
+
+  <!-- Preview Hasil Submit -->
+  <div id="outputResult" class="result-box hidden"></div>
+</div>
+
+<script>
+  const uploadMethod = document.getElementById('uploadMethod');
+  const deviceUploadGroup = document.getElementById('deviceUploadGroup');
+  const dragDropGroup = document.getElementById('dragDropGroup');
+  const cloudLinkGroup = document.getElementById('cloudLinkGroup');
+  
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const dropFileInput = document.getElementById('dropFileInput');
+  const fileList = document.getElementById('fileList');
+  const uploadForm = document.getElementById('uploadForm');
+  const outputResult = document.getElementById('outputResult');
+
+  let selectedFiles = [];
+
+  // Ganti tampilan sesuai opsi upload yang dipilih
+  uploadMethod.addEventListener('change', function() {
+    deviceUploadGroup.classList.add('hidden');
+    dragDropGroup.classList.add('hidden');
+    cloudLinkGroup.classList.add('hidden');
+
+    if (this.value === 'device') {
+      deviceUploadGroup.classList.remove('hidden');
+    } else if (this.value === 'dragdrop') {
+      dragDropGroup.classList.remove('hidden');
+    } else if (this.value === 'cloud') {
+      cloudLinkGroup.classList.remove('hidden');
+    }
+  });
+
+  // Fungsi menampilkan daftar file yang dipilih
+  function updateFileList(files) {
+    selectedFiles = Array.from(files);
+    fileList.innerHTML = '';
+    selectedFiles.forEach(file => {
+      const li = document.createElement('li');
+      const sizeKB = (file.size / 1024).toFixed(1);
+      li.innerHTML = `<span>📄 ${file.name}</span> <span>(${sizeKB} KB)</span>`;
+      fileList.appendChild(li);
+    });
+  }
+
+  fileInput.addEventListener('change', (e) => updateFileList(e.target.files));
+
+  // Event untuk Drag & Drop
+  dropZone.addEventListener('click', () => dropFileInput.click());
+  dropFileInput.addEventListener('change', (e) => updateFileList(e.target.files));
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      updateFileList(e.dataTransfer.files);
+    }
+  });
+
+  // Simulasi saat tombol Kirim ditekan
+  uploadForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const desc = document.getElementById('linkDescription').value.trim();
+    const cloudUrl = document.getElementById('cloudUrl').value.trim();
+    
+    let fileNames = selectedFiles.length > 0 
+      ? selectedFiles.map(f => f.name).join(', ') 
+      : 'Tidak ada file lokal dipilih';
+
+    outputResult.classList.remove('hidden');
+    outputResult.innerHTML = `
+      <strong>Data Berhasil Diproses:</strong><br>
+      • <b>File:</b> ${fileNames}<br>
+      ${cloudUrl ? `• <b>Link Cloud:</b> ${cloudUrl}<br>` : ''}
+      • <b>Deskripsi / Link Tempelan:</b><br> ${desc ? desc.replace(/\n/g, '<br>') : '-'}
+    `;
+  });
+</script>
+
+</body>
+</html>
