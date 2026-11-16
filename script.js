@@ -354,7 +354,7 @@ function setupUploadListeners() {
     if (inputAvatar) {
         inputAvatar.addEventListener("change", e => {
             if (e.target.files[0]) {
-                compressImage(e.target.files[0], 280, 0.65, res => {
+                compressImage(e.target.files[0], 500, 0.88, res => {
                     db.avatar = res;
                     renderUI();
                     saveData();
@@ -367,7 +367,7 @@ function setupUploadListeners() {
     if (inputBg) {
         inputBg.addEventListener("change", e => {
             if (e.target.files[0]) {
-                compressImage(e.target.files[0], 850, 0.6, res => {
+                compressImage(e.target.files[0], 1400, 0.85, res => {
                     db.bg = res;
                     renderUI();
                     saveData();
@@ -382,7 +382,7 @@ function setupUploadListeners() {
             e.preventDefault();
             const file = document.getElementById("proj-img").files[0];
             if (file) {
-                compressImage(file, 450, 0.6, imgData => {
+                compressImage(file, 900, 0.85, imgData => {
                     db.projects.unshift({
                         id: Date.now(),
                         title: document.getElementById("proj-title").value,
