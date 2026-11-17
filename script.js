@@ -78,8 +78,33 @@ let targetIconEl = null;
 let mouse = { x: null, y: null };
 
 // =========================================================================
-// 3. KONVERTER URL MEDIA HD (GOOGLE DRIVE & YOUTUBE TANPA KOMPRESI)
+// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA
 // =========================================================================
+function processHighQualityImage(file, maxW, quality, callback) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let w = img.width;
+            let h = img.height;
+            if (w > maxW) {
+                h = Math.round((h * maxW) / w);
+                w = maxW;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, 0, 0, w, h);
+            callback(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
 function extractDriveId(url) {
     const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match1) return match1[1];
@@ -92,7 +117,6 @@ function getDirectImageUrl(url) {
     if (!url) return "";
     const driveId = extractDriveId(url);
     if (driveId) {
-        // Mengambil gambar resolusi asli dari Google Drive tanpa turun kualitas
         return `https://lh3.googleusercontent.com/d/${driveId}=s0`;
     }
     return url.trim();
@@ -100,17 +124,14 @@ function getDirectImageUrl(url) {
 
 function getEmbedVideoInfo(url) {
     const cleanUrl = url.trim();
-    // Cek YouTube (youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)
     const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
         return { kind: "iframe", src: `https://www.youtube.com/embed/${ytMatch[1]}` };
     }
-    // Cek Google Drive Video
     const driveId = extractDriveId(cleanUrl);
     if (driveId) {
         return { kind: "iframe", src: `https://drive.google.com/file/d/${driveId}/preview` };
     }
-    // Direct MP4 / WebM
     return { kind: "video", src: cleanUrl };
 }
 
@@ -294,28 +315,7 @@ async function logoutAdmin() {
 }
 
 // =========================================================================
-// 6. GANTI FOTO PROFIL & BACKGROUND HD VIA URL
-// =========================================================================
-function promptMediaUrl(target) {
-    if (!currentUser) return;
-    const label = target === "avatar" ? "Foto Profil" : "Latar Belakang";
-    const input = prompt(`Tempel link gambar HD untuk ${label} (dari Google Drive / Postimages / Imgur):\n(Kosongkan untuk reset)`);
-    if (input === null) return;
-
-    if (input.trim() === "") {
-        if (target === "avatar") db.avatar = defaultAvatar;
-        if (target === "bg") db.bg = "";
-    } else {
-        const hdUrl = getDirectImageUrl(input);
-        if (target === "avatar") db.avatar = hdUrl;
-        if (target === "bg") db.bg = hdUrl;
-    }
-    renderUI();
-    saveData(true);
-}
-
-// =========================================================================
-// 7. MODAL TAMBAH KONTEN (GAMBAR / VIDEO / FILE + DESKRIPSI)
+// 6. UNGGAH FOTO PROFIL, BACKGROUND & KARYA LANGSUNG
 // =========================================================================
 function openProjectModal() {
     document.getElementById("form-proyek").reset();
@@ -325,63 +325,130 @@ function openProjectModal() {
 
 function toggleFormInputs() {
     const type = document.getElementById("proj-type").value;
+    const groupFile = document.getElementById("group-file-upload");
+    const groupUrl = document.getElementById("group-url-input");
+    const fileInput = document.getElementById("proj-file-input");
+    const urlInput = document.getElementById("proj-url");
     const labelUrl = document.getElementById("label-media-url");
-    const inputUrl = document.getElementById("proj-url");
     const helpUrl = document.getElementById("help-media-url");
     const extGroup = document.getElementById("file-ext-group");
 
-    if (type === "image") {
-        labelUrl.textContent = "Link Gambar HD (Google Drive / Imgur / Postimages)";
-        inputUrl.placeholder = "https://drive.google.com/file/d/...";
-        helpUrl.textContent = "Pastikan akses Google Drive diatur ke 'Siapa saja yang memiliki link'. Gambar ditampilkan 100% tajam tanpa kompresi.";
+    if (type === "image-file") {
+        groupFile.style.display = "block";
+        groupUrl.style.display = "none";
         extGroup.style.display = "none";
-    } else if (type === "video") {
-        labelUrl.textContent = "Link Video (YouTube / Google Drive / MP4)";
-        inputUrl.placeholder = "https://youtu.be/... atau link video Google Drive";
-        helpUrl.textContent = "Mendukung link YouTube, YouTube Shorts, atau video MP4 yang diunggah ke Google Drive.";
-        extGroup.style.display = "none";
+        fileInput.required = true;
+        urlInput.required = false;
     } else {
-        labelUrl.textContent = "Link File (Google Drive / GitHub)";
-        inputUrl.placeholder = "https://drive.google.com/file/d/...";
-        helpUrl.textContent = "Mendukung semua format file: PDF, DOCX, PPTX, ZIP, Packet Tracer (.pkt), konfigurasi MikroTik (.rsc), dll.";
-        extGroup.style.display = "block";
+        groupFile.style.display = "none";
+        groupUrl.style.display = "block";
+        fileInput.required = false;
+        urlInput.required = true;
+
+        if (type === "image-url") {
+            labelUrl.textContent = "Link Gambar HD (Google Drive / Imgur / Postimages)";
+            urlInput.placeholder = "https://drive.google.com/file/d/...";
+            helpUrl.textContent = "Pastikan akses Google Drive diatur ke 'Siapa saja yang memiliki link'.";
+            extGroup.style.display = "none";
+        } else if (type === "video") {
+            labelUrl.textContent = "Link Video (YouTube / Google Drive / MP4)";
+            urlInput.placeholder = "https://youtu.be/... atau link video Google Drive";
+            helpUrl.textContent = "Mendukung link YouTube, YouTube Shorts, atau video MP4 Google Drive.";
+            extGroup.style.display = "none";
+        } else {
+            labelUrl.textContent = "Link File (Google Drive / GitHub)";
+            urlInput.placeholder = "https://drive.google.com/file/d/...";
+            helpUrl.textContent = "Mendukung semua format file: PDF, DOCX, PPTX, ZIP, Packet Tracer (.pkt), MikroTik (.rsc), dll.";
+            extGroup.style.display = "block";
+        }
     }
 }
 
-function setupFormListener() {
+function setupUploadListeners() {
+    // Unggah Foto Profil Langsung (HD 550px, kualitas 92%)
+    const inputAvatar = document.getElementById("input-avatar");
+    if (inputAvatar) {
+        inputAvatar.addEventListener("change", e => {
+            if (e.target.files[0]) {
+                processHighQualityImage(e.target.files[0], 550, 0.92, res => {
+                    db.avatar = res;
+                    renderUI();
+                    saveData(true);
+                });
+            }
+        });
+    }
+
+    // Unggah Latar Belakang Langsung (HD 1366px, kualitas 88%)
+    const inputBg = document.getElementById("input-bg");
+    if (inputBg) {
+        inputBg.addEventListener("change", e => {
+            if (e.target.files[0]) {
+                processHighQualityImage(e.target.files[0], 1366, 0.88, res => {
+                    db.bg = res;
+                    renderUI();
+                    saveData(true);
+                });
+            }
+        });
+    }
+
+    // Submit Tambah Karya (Unggah Foto Langsung / Link / Video / File)
     const formProyek = document.getElementById("form-proyek");
     if (!formProyek) return;
 
     formProyek.addEventListener("submit", e => {
         e.preventDefault();
         const type = document.getElementById("proj-type").value;
-        const rawUrl = document.getElementById("proj-url").value.trim();
         const title = document.getElementById("proj-title").value.trim();
         const tag = document.getElementById("proj-tag").value.trim().toUpperCase();
         const desc = document.getElementById("proj-desc").value.trim();
         const ext = document.getElementById("proj-ext").value.trim().toUpperCase() || "FILE";
 
-        const finalUrl = type === "image" ? getDirectImageUrl(rawUrl) : rawUrl;
+        if (type === "image-file") {
+            const file = document.getElementById("proj-file-input").files[0];
+            if (!file) return;
+            // Proses foto galeri langsung dengan resolusi HD (1200px, kualitas 90%)
+            processHighQualityImage(file, 1200, 0.90, imgData => {
+                db.projects.unshift({
+                    id: Date.now(),
+                    type: "image",
+                    title,
+                    tag,
+                    desc,
+                    url: imgData,
+                    ext: ""
+                });
+                document.getElementById("modal-proyek").classList.remove("active");
+                formProyek.reset();
+                renderProjects();
+                saveData(true);
+            });
+        } else {
+            const rawUrl = document.getElementById("proj-url").value.trim();
+            const normalizedType = type === "image-url" ? "image" : type;
+            const finalUrl = normalizedType === "image" ? getDirectImageUrl(rawUrl) : rawUrl;
 
-        db.projects.unshift({
-            id: Date.now(),
-            type,
-            title,
-            tag,
-            desc,
-            url: finalUrl,
-            ext: type === "file" ? ext : ""
-        });
+            db.projects.unshift({
+                id: Date.now(),
+                type: normalizedType,
+                title,
+                tag,
+                desc,
+                url: finalUrl,
+                ext: normalizedType === "file" ? ext : ""
+            });
 
-        document.getElementById("modal-proyek").classList.remove("active");
-        formProyek.reset();
-        renderProjects();
-        saveData(true);
+            document.getElementById("modal-proyek").classList.remove("active");
+            formProyek.reset();
+            renderProjects();
+            saveData(true);
+        }
     });
 }
 
 // =========================================================================
-// 8. RENDER KARTU GALERI & PREVIEW FULLSCREEN
+// 7. RENDER KARTU GALERI & PREVIEW FULLSCREEN
 // =========================================================================
 function renderProjects() {
     const grid = document.getElementById("projects-grid");
@@ -397,7 +464,7 @@ function renderProjects() {
         let actionBtnHTML = "";
 
         if (type === "image") {
-            badgeHTML = `<span class="media-type-pill"><i class="fas fa-image"></i> GAMBAR HD</span>`;
+            badgeHTML = `<span class="media-type-pill"><i class="fas fa-image"></i> FOTO</span>`;
             mediaHTML = `<img src="${mediaUrl}" class="project-thumb" alt="${p.title}" loading="lazy" onclick="openPreview(${p.id})">`;
             actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-expand"></i> Lihat Penuh</button>`;
         } else if (type === "video") {
@@ -478,7 +545,7 @@ function deleteProject(id) {
 }
 
 // =========================================================================
-// 9. SIMPAN & RESET DATA KE FIRESTORE
+// 8. SIMPAN & RESET DATA KE FIRESTORE
 // =========================================================================
 async function saveData(notify = true) {
     if (!isFirebaseReady || !currentUser) {
@@ -492,6 +559,12 @@ async function saveData(notify = true) {
             db.texts[key] = el.innerText.trim();
         }
     });
+
+    const payloadSize = new Blob([JSON.stringify(db)]).size;
+    if (payloadSize > 980000) {
+        alert("Kapasitas penyimpanan langsung hampir penuh (mendekati 1MB). Gunakan opsi 'Link Gambar HD' dari Google Drive untuk foto tambahan, atau hapus foto lama.");
+        return;
+    }
 
     try {
         showToast("Menyimpan ke database...");
@@ -530,7 +603,7 @@ function showToast(msg) {
 }
 
 // =========================================================================
-// 10. MODAL IKON & ANIMASI PARTIKEL
+// 9. MODAL IKON & ANIMASI PARTIKEL
 // =========================================================================
 function renderIconModal() {
     const grid = document.getElementById("icon-grid");
@@ -646,7 +719,7 @@ function initAnimations() {
 }
 
 // =========================================================================
-// 11. INISIALISASI GLOBAL
+// 10. INISIALISASI GLOBAL
 // =========================================================================
 window.toggleEditMode = toggleEditMode;
 window.cycleTheme = cycleTheme;
@@ -654,7 +727,6 @@ window.saveData = saveData;
 window.resetData = resetData;
 window.deleteProject = deleteProject;
 window.copyContact = copyContact;
-window.promptMediaUrl = promptMediaUrl;
 window.openProjectModal = openProjectModal;
 window.toggleFormInputs = toggleFormInputs;
 window.openPreview = openPreview;
@@ -662,7 +734,7 @@ window.closePreview = closePreview;
 
 async function init() {
     injectLoginModal();
-    setupFormListener();
+    setupUploadListeners();
     initAnimations();
 
     if (isFirebaseReady && auth) {
