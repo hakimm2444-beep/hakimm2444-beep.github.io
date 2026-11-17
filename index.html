@@ -9,10 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Input File Tersembunyi -->
-    <input type="file" id="input-avatar" accept="image/*" hidden>
-    <input type="file" id="input-bg" accept="image/*" hidden>
-
     <!-- Navbar -->
     <nav class="navbar">
         <div class="logo">
@@ -34,8 +30,8 @@
         <canvas id="network-canvas"></canvas>
         <div class="hero-overlay"></div>
 
-        <button class="edit-only btn-floating-top" onclick="document.getElementById('input-bg').click()">
-            <i class="fas fa-image"></i> Ganti Latar Belakang
+        <button class="edit-only btn-floating-top" onclick="promptMediaUrl('bg')">
+            <i class="fas fa-image"></i> Ganti Latar Belakang (HD)
         </button>
 
         <div class="hero-card reveal">
@@ -46,7 +42,7 @@
 
             <div class="avatar-wrapper">
                 <img id="profile-img" src="" alt="Foto Profil">
-                <button class="edit-only btn-upload-avatar" onclick="document.getElementById('input-avatar').click()">
+                <button class="edit-only btn-upload-avatar" onclick="promptMediaUrl('avatar')" title="Ganti Foto Profil HD">
                     <i class="fas fa-camera"></i>
                 </button>
             </div>
@@ -59,7 +55,7 @@
             </p>
 
             <div class="hero-actions">
-                <a href="#proyek" class="btn-primary"><i class="fas fa-folder-open"></i> Lihat Proyek</a>
+                <a href="#proyek" class="btn-primary"><i class="fas fa-folder-open"></i> Lihat Karya & File</a>
                 <a href="#kontak" class="btn-outline"><i class="fas fa-paper-plane"></i> Kontak</a>
             </div>
         </div>
@@ -121,14 +117,14 @@
         </div>
     </section>
 
-    <!-- Proyek & Galeri -->
+    <!-- Proyek, Video & File -->
     <section id="proyek" class="section">
         <div class="container">
             <div class="section-header reveal">
-                <span class="section-tag">// 03. GALERI & SERTIFIKAT</span>
-                <h2 class="editable" data-key="titleProject">Dokumentasi Praktikum</h2>
-                <button class="edit-only btn-primary" style="margin-top: 15px;" onclick="document.getElementById('modal-proyek').classList.add('active')">
-                    <i class="fas fa-plus"></i> Tambah Foto / Proyek
+                <span class="section-tag">// 03. GALERI, VIDEO & DOKUMEN</span>
+                <h2 class="editable" data-key="titleProject">Dokumentasi Praktikum & File</h2>
+                <button class="edit-only btn-primary" style="margin-top: 15px;" onclick="openProjectModal()">
+                    <i class="fas fa-plus"></i> Tambah Gambar / Video / File
                 </button>
             </div>
             <div class="projects-grid reveal" id="projects-grid"></div>
@@ -154,7 +150,7 @@
                 </div>
                 <div class="glass-card contact-item hover-tilt" onclick="copyContact(this)">
                     <i class="fab fa-github edit-icon" data-icon="iconContact3"></i>
-                    <span class="contact-text editable" data-key="github">github.com/username</span>
+                    <span class="contact-text editable" data-key="github">github.com/hakimm2444-beep</span>
                     <i class="fas fa-copy copy-badge"></i>
                 </div>
             </div>
@@ -173,22 +169,56 @@
         </div>
     </div>
 
-    <!-- Modal Tambah Proyek -->
+    <!-- Modal Tambah Karya (Gambar / Video / File) -->
     <div id="modal-proyek" class="modal">
         <div class="modal-content glass-card">
             <div class="modal-header">
-                <h3><i class="fas fa-cloud-upload-alt"></i> Tambah Proyek</h3>
+                <h3><i class="fas fa-folder-plus"></i> Tambah Konten Baru</h3>
                 <button class="close-modal" onclick="this.closest('.modal').classList.remove('active')">&times;</button>
             </div>
             <form id="form-proyek">
-                <label>Foto Proyek / Sertifikat</label>
-                <input type="file" id="proj-img" accept="image/*" required>
-                <label>Judul Proyek</label>
-                <input type="text" id="proj-title" placeholder="Contoh: Konfigurasi Hotspot MikroTik" required>
-                <label>Kategori</label>
-                <input type="text" id="proj-tag" placeholder="Contoh: MIKROTIK" required>
-                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 15px;">Simpan Proyek</button>
+                <label>Jenis Konten</label>
+                <select id="proj-type" onchange="toggleFormInputs()">
+                    <option value="image">Gambar / Foto (Resolusi Asli HD)</option>
+                    <option value="video">Video (YouTube / Google Drive / MP4)</option>
+                    <option value="file">File Dokumen / Konfigurasi (PDF, PKT, RSC, ZIP, DOCX)</option>
+                </select>
+
+                <label id="label-media-url">Link Gambar HD (Google Drive / Imgur / Postimages)</label>
+                <input type="url" id="proj-url" placeholder="Tempel link gambar di sini..." required>
+                <small class="form-help" id="help-media-url">Gunakan link Google Drive (Akses: Siapa saja yang memiliki link) agar gambar tampil 100% tajam.</small>
+
+                <div id="file-ext-group" style="display: none;">
+                    <label>Format / Ekstensi File</label>
+                    <input type="text" id="proj-ext" placeholder="Contoh: PDF, PKT (Packet Tracer), RSC, ZIP">
+                </div>
+
+                <label>Judul Karya / File</label>
+                <input type="text" id="proj-title" placeholder="Contoh: Konfigurasi VLAN & Hotspot MikroTik" required>
+
+                <label>Kategori / Tag</label>
+                <input type="text" id="proj-tag" placeholder="Contoh: MIKROTIK / LINUX / IOT" required>
+
+                <label>Deskripsi</label>
+                <textarea id="proj-desc" rows="3" placeholder="Jelaskan detail konfigurasi, alat yang digunakan, atau isi file..." required></textarea>
+
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 16px;">
+                    <i class="fas fa-check"></i> Tambahkan ke Galeri
+                </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Pratinjau Media Fullscreen (Tanpa Blur/Crop) -->
+    <div id="modal-preview" class="modal" onclick="if(event.target === this) closePreview()">
+        <div class="modal-preview-box">
+            <button class="close-preview-btn" onclick="closePreview()">&times;</button>
+            <div id="preview-media-container"></div>
+            <div class="preview-caption">
+                <span id="preview-tag" class="project-tag"></span>
+                <h3 id="preview-title"></h3>
+                <p id="preview-desc"></p>
+            </div>
         </div>
     </div>
 
