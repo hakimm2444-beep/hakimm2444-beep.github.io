@@ -9,6 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Input File Tersembunyi untuk Unggah Langsung -->
+    <input type="file" id="input-avatar" accept="image/*" hidden>
+    <input type="file" id="input-bg" accept="image/*" hidden>
+
     <!-- Navbar -->
     <nav class="navbar">
         <div class="logo">
@@ -30,8 +34,8 @@
         <canvas id="network-canvas"></canvas>
         <div class="hero-overlay"></div>
 
-        <button class="edit-only btn-floating-top" onclick="promptMediaUrl('bg')">
-            <i class="fas fa-image"></i> Ganti Latar Belakang (HD)
+        <button class="edit-only btn-floating-top" onclick="document.getElementById('input-bg').click()">
+            <i class="fas fa-image"></i> Unggah Latar Belakang
         </button>
 
         <div class="hero-card reveal">
@@ -42,7 +46,7 @@
 
             <div class="avatar-wrapper">
                 <img id="profile-img" src="" alt="Foto Profil">
-                <button class="edit-only btn-upload-avatar" onclick="promptMediaUrl('avatar')" title="Ganti Foto Profil HD">
+                <button class="edit-only btn-upload-avatar" onclick="document.getElementById('input-avatar').click()" title="Unggah Foto Profil">
                     <i class="fas fa-camera"></i>
                 </button>
             </div>
@@ -169,7 +173,7 @@
         </div>
     </div>
 
-    <!-- Modal Tambah Karya (Gambar / Video / File) -->
+    <!-- Modal Tambah Karya (Unggah Foto Langsung / Video / File) -->
     <div id="modal-proyek" class="modal">
         <div class="modal-content glass-card">
             <div class="modal-header">
@@ -179,15 +183,27 @@
             <form id="form-proyek">
                 <label>Jenis Konten</label>
                 <select id="proj-type" onchange="toggleFormInputs()">
-                    <option value="image">Gambar / Foto (Resolusi Asli HD)</option>
+                    <option value="image-file">Unggah Foto Langsung (Dari Galeri / Laptop)</option>
+                    <option value="image-url">Link Gambar HD (Google Drive / Imgur)</option>
                     <option value="video">Video (YouTube / Google Drive / MP4)</option>
                     <option value="file">File Dokumen / Konfigurasi (PDF, PKT, RSC, ZIP, DOCX)</option>
                 </select>
 
-                <label id="label-media-url">Link Gambar HD (Google Drive / Imgur / Postimages)</label>
-                <input type="url" id="proj-url" placeholder="Tempel link gambar di sini..." required>
-                <small class="form-help" id="help-media-url">Gunakan link Google Drive (Akses: Siapa saja yang memiliki link) agar gambar tampil 100% tajam.</small>
+                <!-- Input File Gambar Langsung -->
+                <div id="group-file-upload">
+                    <label>Pilih File Foto (JPG / PNG / WebP)</label>
+                    <input type="file" id="proj-file-input" accept="image/*">
+                    <small class="form-help">Foto diproses dengan kualitas tinggi (HD) agar tetap tajam dan jelas.</small>
+                </div>
 
+                <!-- Input Link URL -->
+                <div id="group-url-input" style="display: none;">
+                    <label id="label-media-url">Link Media</label>
+                    <input type="url" id="proj-url" placeholder="Tempel link di sini...">
+                    <small class="form-help" id="help-media-url"></small>
+                </div>
+
+                <!-- Input Ekstensi File -->
                 <div id="file-ext-group" style="display: none;">
                     <label>Format / Ekstensi File</label>
                     <input type="text" id="proj-ext" placeholder="Contoh: PDF, PKT (Packet Tracer), RSC, ZIP">
@@ -209,7 +225,7 @@
         </div>
     </div>
 
-    <!-- Modal Pratinjau Media Fullscreen (Tanpa Blur/Crop) -->
+    <!-- Modal Pratinjau Media Fullscreen -->
     <div id="modal-preview" class="modal" onclick="if(event.target === this) closePreview()">
         <div class="modal-preview-box">
             <button class="close-preview-btn" onclick="closePreview()">&times;</button>
