@@ -78,7 +78,7 @@ let targetIconEl = null;
 let mouse = { x: null, y: null };
 
 // =========================================================================
-// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA
+// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA (TIKTOK / YT / DRIVE)
 // =========================================================================
 function processHighQualityImage(file, maxW, quality, callback) {
     const reader = new FileReader();
@@ -124,14 +124,31 @@ function getDirectImageUrl(url) {
 
 function getEmbedVideoInfo(url) {
     const cleanUrl = url.trim();
+
+    // 1. Cek YouTube (youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)
     const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
         return { kind: "iframe", src: `https://www.youtube.com/embed/${ytMatch[1]}` };
     }
+
+    // 2. Cek TikTok URL Penuh (https://www.tiktok.com/@username/video/1234567890123456789)
+    const tiktokMatch = cleanUrl.match(/tiktok\.com\/.*\/video\/(\d+)/);
+    if (tiktokMatch) {
+        return { kind: "iframe", src: `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}` };
+    }
+
+    // 3. Cek Link Pendek TikTok (vt.tiktok.com / vm.tiktok.com)
+    if (cleanUrl.includes("tiktok.com")) {
+        return { kind: "external-video", src: cleanUrl };
+    }
+
+    // 4. Cek Google Drive Video
     const driveId = extractDriveId(cleanUrl);
     if (driveId) {
         return { kind: "iframe", src: `https://drive.google.com/file/d/${driveId}/preview` };
     }
+
+    // 5. Direct MP4 / WebM
     return { kind: "video", src: cleanUrl };
 }
 
@@ -351,9 +368,9 @@ function toggleFormInputs() {
             helpUrl.textContent = "Pastikan akses Google Drive diatur ke 'Siapa saja yang memiliki link'.";
             extGroup.style.display = "none";
         } else if (type === "video") {
-            labelUrl.textContent = "Link Video (YouTube / Google Drive / MP4)";
-            urlInput.placeholder = "https://youtu.be/... atau link video Google Drive";
-            helpUrl.textContent = "Mendukung link YouTube, YouTube Shorts, atau video MP4 Google Drive.";
+            labelUrl.textContent = "Link Video (TikTok / YouTube / Google Drive / MP4)";
+            urlInput.placeholder = "https://www.tiktok.com/@.../video/... atau https://youtu.be/...";
+            helpUrl.textContent = "Mendukung link video TikTok, YouTube, YouTube Shorts, atau video MP4 Google Drive.";
             extGroup.style.display = "none";
         } else {
             labelUrl.textContent = "Link File (Google Drive / GitHub)";
@@ -393,7 +410,7 @@ function setupUploadListeners() {
         });
     }
 
-    // Submit Tambah Karya (Unggah Foto Langsung / Link / Video / File)
+    // Submit Tambah Karya (Unggah Foto Langsung / Link / TikTok / Video / File)
     const formProyek = document.getElementById("form-proyek");
     if (!formProyek) return;
 
@@ -408,7 +425,6 @@ function setupUploadListeners() {
         if (type === "image-file") {
             const file = document.getElementById("proj-file-input").files[0];
             if (!file) return;
-            // Proses foto galeri langsung dengan resolusi HD (1200px, kualitas 90%)
             processHighQualityImage(file, 1200, 0.90, imgData => {
                 db.projects.unshift({
                     id: Date.now(),
@@ -472,10 +488,18 @@ function renderProjects() {
             badgeHTML = `<span class="media-type-pill"><i class="fas fa-video"></i> VIDEO</span>`;
             if (vid.kind === "iframe") {
                 mediaHTML = `<iframe src="${vid.src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+                actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-play"></i> Putar Layar Penuh</button>`;
+            } else if (vid.kind === "external-video") {
+                mediaHTML = `
+                    <div class="file-banner">
+                        <i class="fab fa-tiktok"></i>
+                        <span class="file-ext-badge">VIDEO TIKTOK</span>
+                    </div>`;
+                actionBtnHTML = `<a href="${vid.src}" target="_blank" rel="noopener noreferrer" class="btn-card-action"><i class="fab fa-tiktok"></i> Tonton di TikTok</a>`;
             } else {
                 mediaHTML = `<video src="${vid.src}" controls preload="metadata"></video>`;
+                actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-play"></i> Putar Layar Penuh</button>`;
             }
-            actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-play"></i> Putar Layar Penuh</button>`;
         } else {
             const extLabel = p.ext || "DOKUMEN";
             const iconCls = getFileIcon(extLabel);
@@ -518,6 +542,9 @@ function openPreview(id) {
         const vid = getEmbedVideoInfo(mediaUrl);
         if (vid.kind === "iframe") {
             container.innerHTML = `<iframe src="${vid.src}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+        } else if (vid.kind === "external-video") {
+            window.open(vid.src, "_blank", "noopener,noreferrer");
+            return;
         } else {
             container.innerHTML = `<video src="${vid.src}" controls autoplay></video>`;
         }
