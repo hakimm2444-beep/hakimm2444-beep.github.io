@@ -1,7 +1,7 @@
 :root {
     --bg-dark: #050810;
-    --bg-card: rgba(13, 19, 33, 0.78);
-    --border-glass: rgba(255, 255, 255, 0.09);
+    --bg-card: rgba(13, 19, 33, 0.82);
+    --border-glass: rgba(255, 255, 255, 0.1);
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --accent: #06b6d4;
@@ -25,7 +25,7 @@ body {
     overflow-x: hidden;
 }
 
-input, button, textarea {
+input, button, textarea, select {
     font-family: inherit;
 }
 
@@ -41,19 +41,19 @@ input, button, textarea {
     transform: translateY(0);
 }
 
-/* Navbar Melayang */
+/* Navbar */
 .navbar {
     position: fixed;
     top: 14px;
     left: 50%;
     transform: translateX(-50%);
     width: calc(100% - 28px);
-    max-width: 980px;
+    max-width: 1020px;
     padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(13, 19, 34, 0.82);
+    background: rgba(13, 19, 34, 0.85);
     backdrop-filter: blur(16px);
     border: 1px solid var(--border-glass);
     border-radius: 16px;
@@ -105,7 +105,7 @@ input, button, textarea {
     background-size: cover;
     background-position: center;
     z-index: 1;
-    opacity: 0.38;
+    opacity: 0.42;
 }
 
 #network-canvas {
@@ -163,8 +163,8 @@ input, button, textarea {
 
 .avatar-wrapper {
     position: relative;
-    width: 126px;
-    height: 126px;
+    width: 132px;
+    height: 132px;
     margin: 0 auto 20px;
 }
 
@@ -182,8 +182,8 @@ input, button, textarea {
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     border: none;
     background: var(--accent);
@@ -252,7 +252,7 @@ input, button, textarea {
 }
 
 .btn-outline {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-main);
     border: 1px solid var(--border-glass);
 }
@@ -268,7 +268,7 @@ input, button, textarea {
 }
 
 .container {
-    max-width: 980px;
+    max-width: 1020px;
     margin: 0 auto;
 }
 
@@ -304,10 +304,16 @@ input, button, textarea {
     box-shadow: 0 10px 30px var(--accent-glow);
 }
 
-.about-grid, .skills-grid, .projects-grid {
+.about-grid, .skills-grid {
     display: grid;
     gap: 20px;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.projects-grid {
+    display: grid;
+    gap: 22px;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
 }
 
 .about-text h3 {
@@ -381,28 +387,110 @@ input, button, textarea {
     color: var(--text-muted);
 }
 
-/* Projects Gallery */
+/* Projects, Video & File Cards (Tajam & Tanpa Distorsi) */
 .project-card {
     padding: 0;
     overflow: hidden;
     position: relative;
     display: flex;
     flex-direction: column;
+    border-color: var(--border-glass);
+}
+
+.project-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+}
+
+.media-box {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #090d16;
+    border-bottom: 1px solid var(--border-glass);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .project-thumb {
     width: 100%;
-    height: 180px;
+    height: 100%;
     object-fit: cover;
-    border-bottom: 1px solid var(--border-glass);
+    image-rendering: -webkit-optimize-contrast;
+    cursor: zoom-in;
+    transition: transform 0.35s ease;
+}
+
+.project-card:hover .project-thumb {
+    transform: scale(1.03);
+}
+
+.media-box iframe,
+.media-box video {
+    width: 100%;
+    height: 100%;
+    border: none;
+    object-fit: contain;
+    background: #000;
+}
+
+.file-banner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(6, 182, 212, 0.12));
+    padding: 20px;
+    text-align: center;
+}
+
+.file-banner i {
+    font-size: 46px;
+    color: var(--accent);
+}
+
+.file-ext-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    letter-spacing: 1px;
+}
+
+.media-type-pill {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(5, 8, 16, 0.85);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .project-body {
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
 }
 
 .project-tag {
     display: inline-block;
+    width: fit-content;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--accent);
@@ -412,11 +500,57 @@ input, button, textarea {
     margin-bottom: 10px;
 }
 
+.project-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+}
+
+.project-desc {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+    flex: 1;
+    white-space: pre-line;
+}
+
+.project-footer-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.btn-card-action {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main);
+    border: 1px solid var(--border-glass);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-card-action:hover {
+    background: var(--accent);
+    color: #050810;
+    border-color: var(--accent);
+}
+
 .btn-delete-proj {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: rgba(239, 68, 68, 0.9);
+    background: rgba(239, 68, 68, 0.92);
     color: white;
     border: none;
     width: 34px;
@@ -424,6 +558,66 @@ input, button, textarea {
     border-radius: 10px;
     cursor: pointer;
     display: none;
+    z-index: 5;
+}
+
+/* Modal Preview Fullscreen */
+.modal-preview-box {
+    position: relative;
+    max-width: 920px;
+    width: 100%;
+    background: #0b1120;
+    border: 1px solid var(--accent);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+}
+
+.close-preview-btn {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+#preview-media-container img {
+    width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    background: #050810;
+    display: block;
+}
+
+#preview-media-container iframe,
+#preview-media-container video {
+    width: 100%;
+    height: 60vh;
+    border: none;
+    background: #000;
+    display: block;
+}
+
+.preview-caption {
+    padding: 20px 24px;
+}
+
+.preview-caption h3 {
+    font-size: 19px;
+    margin-bottom: 6px;
+}
+
+.preview-caption p {
+    font-size: 14px;
+    color: var(--text-muted);
+    white-space: pre-line;
 }
 
 /* Footer & Kontak */
@@ -468,17 +662,18 @@ input, button, textarea {
     margin-left: 4px;
 }
 
-/* Modal */
+/* Modal Form */
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.88);
     z-index: 1200;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(6px);
+    overflow-y: auto;
 }
 
 .modal.active {
@@ -487,16 +682,18 @@ input, button, textarea {
 
 .modal-content {
     width: 100%;
-    max-width: 400px;
+    max-width: 450px;
     background: #0f172a;
     border-color: var(--accent);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .close-modal {
@@ -534,17 +731,32 @@ input, button, textarea {
 form label {
     display: block;
     font-size: 12px;
+    font-weight: 600;
     color: var(--text-muted);
-    margin: 12px 0 6px;
+    margin: 12px 0 5px;
 }
 
-form input {
+form input, form select, form textarea {
     width: 100%;
-    padding: 12px;
+    padding: 11px 12px;
     border-radius: 10px;
     border: 1px solid var(--border-glass);
-    background: rgba(255, 255, 255, 0.05);
+    background: #1e293b;
     color: white;
+    font-size: 13.5px;
+}
+
+form input:focus, form select:focus, form textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.form-help {
+    display: block;
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 5px;
+    line-height: 1.4;
 }
 
 /* Mode Edit */
