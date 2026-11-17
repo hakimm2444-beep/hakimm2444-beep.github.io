@@ -3,14 +3,8 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // =========================================================================
-// 1. KONFIGURASI FIREBASE (Isi dengan firebaseConfig dari Project Settings)
+// 1. KONFIGURASI FIREBASE
 // =========================================================================
-// Import the functions you need from the SDKs you need
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyD6DrR07nH8X_qRlgb7le0RgVPrDgh8nTM",
   authDomain: "hkmmportofolio.firebaseapp.com",
@@ -26,12 +20,10 @@ let firestore = null;
 let isFirebaseReady = false;
 
 try {
-    if (!firebaseConfig.apiKey.includes("TEMPEL_")) {
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        firestore = getFirestore(app);
-        isFirebaseReady = true;
-    }
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    firestore = getFirestore(app);
+    isFirebaseReady = true;
 } catch (err) {
     console.error("Gagal inisialisasi Firebase:", err);
 }
@@ -40,7 +32,7 @@ try {
 // 2. DATA DEFAULT & TEMA
 // =========================================================================
 const defaultAvatar = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#1e293b"/><circle cx="100" cy="75" r="40" fill="#06b6d4"/><path d="M30 190 C30 130, 170 130, 170 190" fill="#06b6d4"/></svg>`);
-const defaultProjImg = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect width="400" height="200" fill="#0f172a"/><circle cx="200" cy="100" r="20" fill="#334155"/><path d="M185 100 L215 100 M200 85 L200 115" stroke="#94a3b8" stroke-width="4"/></svg>`);
+const defaultProjImg = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><rect width="640" height="360" fill="#0f172a"/><circle cx="320" cy="180" r="28" fill="#1e293b" stroke="#06b6d4" stroke-width="3"/><path d="M308 180 L332 180 M320 168 L320 192" stroke="#06b6d4" stroke-width="3"/></svg>`);
 
 const themes = [
     { name: "Cyan Network", hex: "#06b6d4", glow: "rgba(6, 182, 212, 0.35)" },
@@ -67,7 +59,15 @@ const defaultDB = {
     },
     icons: {},
     projects: [
-        { id: 1, title: "Topologi Jaringan Lab", tag: "MIKROTIK", image: defaultProjImg }
+        {
+            id: 1,
+            type: "image",
+            title: "Topologi Jaringan Lab",
+            tag: "MIKROTIK",
+            desc: "Perancangan topologi jaringan lokal menggunakan router MikroTik, manajemen VLAN, dan pembagian bandwidth client.",
+            url: defaultProjImg,
+            ext: ""
+        }
     ]
 };
 
@@ -78,7 +78,55 @@ let targetIconEl = null;
 let mouse = { x: null, y: null };
 
 // =========================================================================
-// 3. MUAT DATA (FIRESTORE ATAU LOCAL STORAGE) & RENDER UI
+// 3. KONVERTER URL MEDIA HD (GOOGLE DRIVE & YOUTUBE TANPA KOMPRESI)
+// =========================================================================
+function extractDriveId(url) {
+    const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match1) return match1[1];
+    const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (match2) return match2[1];
+    return null;
+}
+
+function getDirectImageUrl(url) {
+    if (!url) return "";
+    const driveId = extractDriveId(url);
+    if (driveId) {
+        // Mengambil gambar resolusi asli dari Google Drive tanpa turun kualitas
+        return `https://lh3.googleusercontent.com/d/${driveId}=s0`;
+    }
+    return url.trim();
+}
+
+function getEmbedVideoInfo(url) {
+    const cleanUrl = url.trim();
+    // Cek YouTube (youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)
+    const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+        return { kind: "iframe", src: `https://www.youtube.com/embed/${ytMatch[1]}` };
+    }
+    // Cek Google Drive Video
+    const driveId = extractDriveId(cleanUrl);
+    if (driveId) {
+        return { kind: "iframe", src: `https://drive.google.com/file/d/${driveId}/preview` };
+    }
+    // Direct MP4 / WebM
+    return { kind: "video", src: cleanUrl };
+}
+
+function getFileIcon(ext) {
+    const e = (ext || "").toUpperCase();
+    if (e.includes("PDF")) return "fa-file-pdf";
+    if (e.includes("DOC")) return "fa-file-word";
+    if (e.includes("XLS") || e.includes("CSV")) return "fa-file-excel";
+    if (e.includes("PPT")) return "fa-file-powerpoint";
+    if (e.includes("ZIP") || e.includes("RAR") || e.includes("7Z")) return "fa-file-zipper";
+    if (e.includes("PKT") || e.includes("RSC") || e.includes("CFG") || e.includes("SH")) return "fa-file-code";
+    return "fa-file-lines";
+}
+
+// =========================================================================
+// 4. MUAT DATA DARI FIRESTORE & RENDER UI
 // =========================================================================
 async function loadData() {
     if (isFirebaseReady) {
@@ -96,16 +144,6 @@ async function loadData() {
         } catch (err) {
             console.error("Gagal memuat Firestore:", err);
         }
-    } else {
-        const localData = JSON.parse(localStorage.getItem("hkmmz_portfolio_local"));
-        if (localData) {
-            db = {
-                ...structuredClone(defaultDB),
-                ...localData,
-                texts: { ...defaultDB.texts, ...(localData.texts || {}) },
-                icons: { ...(localData.icons || {}) }
-            };
-        }
     }
     renderUI();
 }
@@ -118,7 +156,7 @@ function renderUI() {
 
     const heroBg = document.getElementById("hero-bg");
     if (heroBg) {
-        heroBg.style.backgroundImage = db.bg ? `url(${db.bg})` : "none";
+        heroBg.style.backgroundImage = db.bg ? `url("${db.bg}")` : "none";
     }
 
     document.querySelectorAll(".editable").forEach(el => {
@@ -159,7 +197,7 @@ function cycleTheme() {
 }
 
 // =========================================================================
-// 4. LOGIN ADMIN & MODE EDIT
+// 5. LOGIN ADMIN & MODE EDIT
 // =========================================================================
 function injectLoginModal() {
     if (document.getElementById("modal-admin-login")) return;
@@ -204,28 +242,26 @@ function injectLoginModal() {
             setEditState(true);
             showToast("Login Admin Berhasil!");
         } catch (err) {
-            alert("Login gagal! Periksa email dan password admin.");
+            alert("Login gagal! Periksa kembali email dan password admin.");
         } finally {
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-sign-in-alt"></i> Masuk Mode Edit`;
         }
     };
 
-    if (isFirebaseReady) {
-        const toolbarActions = document.querySelector(".toolbar-actions");
-        if (toolbarActions && !document.getElementById("btn-admin-logout")) {
-            const logoutBtn = document.createElement("button");
-            logoutBtn.id = "btn-admin-logout";
-            logoutBtn.className = "tool-btn danger";
-            logoutBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> Keluar`;
-            logoutBtn.onclick = logoutAdmin;
-            toolbarActions.appendChild(logoutBtn);
-        }
+    const toolbarActions = document.querySelector(".toolbar-actions");
+    if (toolbarActions && !document.getElementById("btn-admin-logout")) {
+        const logoutBtn = document.createElement("button");
+        logoutBtn.id = "btn-admin-logout";
+        logoutBtn.className = "tool-btn danger";
+        logoutBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> Keluar`;
+        logoutBtn.onclick = logoutAdmin;
+        toolbarActions.appendChild(logoutBtn);
     }
 }
 
 function toggleEditMode() {
-    if (isFirebaseReady && !currentUser) {
+    if (!currentUser) {
         document.getElementById("modal-admin-login").classList.add("active");
         return;
     }
@@ -234,8 +270,6 @@ function toggleEditMode() {
     setEditState(nextState);
     if (!nextState) {
         saveData(true);
-    } else if (!isFirebaseReady) {
-        showToast("Mode Edit Lokal Aktif");
     }
 }
 
@@ -260,9 +294,198 @@ async function logoutAdmin() {
 }
 
 // =========================================================================
-// 5. SIMPAN & RESET DATA
+// 6. GANTI FOTO PROFIL & BACKGROUND HD VIA URL
+// =========================================================================
+function promptMediaUrl(target) {
+    if (!currentUser) return;
+    const label = target === "avatar" ? "Foto Profil" : "Latar Belakang";
+    const input = prompt(`Tempel link gambar HD untuk ${label} (dari Google Drive / Postimages / Imgur):\n(Kosongkan untuk reset)`);
+    if (input === null) return;
+
+    if (input.trim() === "") {
+        if (target === "avatar") db.avatar = defaultAvatar;
+        if (target === "bg") db.bg = "";
+    } else {
+        const hdUrl = getDirectImageUrl(input);
+        if (target === "avatar") db.avatar = hdUrl;
+        if (target === "bg") db.bg = hdUrl;
+    }
+    renderUI();
+    saveData(true);
+}
+
+// =========================================================================
+// 7. MODAL TAMBAH KONTEN (GAMBAR / VIDEO / FILE + DESKRIPSI)
+// =========================================================================
+function openProjectModal() {
+    document.getElementById("form-proyek").reset();
+    toggleFormInputs();
+    document.getElementById("modal-proyek").classList.add("active");
+}
+
+function toggleFormInputs() {
+    const type = document.getElementById("proj-type").value;
+    const labelUrl = document.getElementById("label-media-url");
+    const inputUrl = document.getElementById("proj-url");
+    const helpUrl = document.getElementById("help-media-url");
+    const extGroup = document.getElementById("file-ext-group");
+
+    if (type === "image") {
+        labelUrl.textContent = "Link Gambar HD (Google Drive / Imgur / Postimages)";
+        inputUrl.placeholder = "https://drive.google.com/file/d/...";
+        helpUrl.textContent = "Pastikan akses Google Drive diatur ke 'Siapa saja yang memiliki link'. Gambar ditampilkan 100% tajam tanpa kompresi.";
+        extGroup.style.display = "none";
+    } else if (type === "video") {
+        labelUrl.textContent = "Link Video (YouTube / Google Drive / MP4)";
+        inputUrl.placeholder = "https://youtu.be/... atau link video Google Drive";
+        helpUrl.textContent = "Mendukung link YouTube, YouTube Shorts, atau video MP4 yang diunggah ke Google Drive.";
+        extGroup.style.display = "none";
+    } else {
+        labelUrl.textContent = "Link File (Google Drive / GitHub)";
+        inputUrl.placeholder = "https://drive.google.com/file/d/...";
+        helpUrl.textContent = "Mendukung semua format file: PDF, DOCX, PPTX, ZIP, Packet Tracer (.pkt), konfigurasi MikroTik (.rsc), dll.";
+        extGroup.style.display = "block";
+    }
+}
+
+function setupFormListener() {
+    const formProyek = document.getElementById("form-proyek");
+    if (!formProyek) return;
+
+    formProyek.addEventListener("submit", e => {
+        e.preventDefault();
+        const type = document.getElementById("proj-type").value;
+        const rawUrl = document.getElementById("proj-url").value.trim();
+        const title = document.getElementById("proj-title").value.trim();
+        const tag = document.getElementById("proj-tag").value.trim().toUpperCase();
+        const desc = document.getElementById("proj-desc").value.trim();
+        const ext = document.getElementById("proj-ext").value.trim().toUpperCase() || "FILE";
+
+        const finalUrl = type === "image" ? getDirectImageUrl(rawUrl) : rawUrl;
+
+        db.projects.unshift({
+            id: Date.now(),
+            type,
+            title,
+            tag,
+            desc,
+            url: finalUrl,
+            ext: type === "file" ? ext : ""
+        });
+
+        document.getElementById("modal-proyek").classList.remove("active");
+        formProyek.reset();
+        renderProjects();
+        saveData(true);
+    });
+}
+
+// =========================================================================
+// 8. RENDER KARTU GALERI & PREVIEW FULLSCREEN
+// =========================================================================
+function renderProjects() {
+    const grid = document.getElementById("projects-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    db.projects.forEach(p => {
+        const type = p.type || "image";
+        const mediaUrl = p.url || p.image || defaultProjImg;
+        const descText = p.desc || "Dokumentasi praktikum dan portofolio kompetensi TJKT.";
+        let mediaHTML = "";
+        let badgeHTML = "";
+        let actionBtnHTML = "";
+
+        if (type === "image") {
+            badgeHTML = `<span class="media-type-pill"><i class="fas fa-image"></i> GAMBAR HD</span>`;
+            mediaHTML = `<img src="${mediaUrl}" class="project-thumb" alt="${p.title}" loading="lazy" onclick="openPreview(${p.id})">`;
+            actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-expand"></i> Lihat Penuh</button>`;
+        } else if (type === "video") {
+            const vid = getEmbedVideoInfo(mediaUrl);
+            badgeHTML = `<span class="media-type-pill"><i class="fas fa-video"></i> VIDEO</span>`;
+            if (vid.kind === "iframe") {
+                mediaHTML = `<iframe src="${vid.src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+            } else {
+                mediaHTML = `<video src="${vid.src}" controls preload="metadata"></video>`;
+            }
+            actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-play"></i> Putar Layar Penuh</button>`;
+        } else {
+            const extLabel = p.ext || "DOKUMEN";
+            const iconCls = getFileIcon(extLabel);
+            badgeHTML = `<span class="media-type-pill"><i class="fas fa-file"></i> FILE</span>`;
+            mediaHTML = `
+                <div class="file-banner">
+                    <i class="fas ${iconCls}"></i>
+                    <span class="file-ext-badge">${extLabel}</span>
+                </div>`;
+            actionBtnHTML = `<a href="${mediaUrl}" target="_blank" rel="noopener noreferrer" class="btn-card-action"><i class="fas fa-external-link-alt"></i> Buka / Unduh File</a>`;
+        }
+
+        grid.innerHTML += `
+            <div class="glass-card project-card">
+                <button class="btn-delete-proj" onclick="deleteProject(${p.id})" title="Hapus"><i class="fas fa-trash"></i></button>
+                <div class="media-box">
+                    ${badgeHTML}
+                    ${mediaHTML}
+                </div>
+                <div class="project-body">
+                    <span class="project-tag">${p.tag}</span>
+                    <h3 class="project-title">${p.title}</h3>
+                    <p class="project-desc">${descText}</p>
+                    <div class="project-footer-actions">
+                        ${actionBtnHTML}
+                    </div>
+                </div>
+            </div>`;
+    });
+}
+
+function openPreview(id) {
+    const item = db.projects.find(p => p.id === id);
+    if (!item) return;
+
+    const container = document.getElementById("preview-media-container");
+    const mediaUrl = item.url || item.image || defaultProjImg;
+
+    if ((item.type || "image") === "video") {
+        const vid = getEmbedVideoInfo(mediaUrl);
+        if (vid.kind === "iframe") {
+            container.innerHTML = `<iframe src="${vid.src}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+        } else {
+            container.innerHTML = `<video src="${vid.src}" controls autoplay></video>`;
+        }
+    } else {
+        container.innerHTML = `<img src="${mediaUrl}" alt="${item.title}">`;
+    }
+
+    document.getElementById("preview-tag").textContent = item.tag;
+    document.getElementById("preview-title").textContent = item.title;
+    document.getElementById("preview-desc").textContent = item.desc || "";
+    document.getElementById("modal-preview").classList.add("active");
+}
+
+function closePreview() {
+    document.getElementById("modal-preview").classList.remove("active");
+    document.getElementById("preview-media-container").innerHTML = "";
+}
+
+function deleteProject(id) {
+    if (confirm("Hapus item ini dari galeri?")) {
+        db.projects = db.projects.filter(p => p.id !== id);
+        renderProjects();
+        saveData(true);
+    }
+}
+
+// =========================================================================
+// 9. SIMPAN & RESET DATA KE FIRESTORE
 // =========================================================================
 async function saveData(notify = true) {
+    if (!isFirebaseReady || !currentUser) {
+        alert("Anda harus login sebagai admin untuk menyimpan perubahan.");
+        return;
+    }
+
     document.querySelectorAll(".editable").forEach(el => {
         const key = el.getAttribute("data-key");
         if (key) {
@@ -270,36 +493,19 @@ async function saveData(notify = true) {
         }
     });
 
-    if (isFirebaseReady) {
-        if (!currentUser) {
-            alert("Silakan login sebagai admin untuk menyimpan perubahan.");
-            return;
-        }
-        const payloadSize = new Blob([JSON.stringify(db)]).size;
-        if (payloadSize > 950000) {
-            alert("Ukuran total foto mendekati batas 1MB. Hapus beberapa foto proyek terlebih dahulu.");
-            return;
-        }
-        try {
-            showToast("Menyimpan ke database...");
-            await setDoc(doc(firestore, "portfolio", "main"), db);
-            if (notify) showToast("Tersimpan Online!");
-        } catch (err) {
-            console.error(err);
-            alert("Gagal menyimpan ke Firebase. Cek Rules Firestore kamu.");
-        }
-    } else {
-        try {
-            localStorage.setItem("hkmmz_portfolio_local", JSON.stringify(db));
-            if (notify) showToast("Tersimpan di Browser!");
-        } catch (err) {
-            alert("Memori browser penuh! Hapus beberapa foto lama.");
-        }
+    try {
+        showToast("Menyimpan ke database...");
+        await setDoc(doc(firestore, "portfolio", "main"), db);
+        if (notify) showToast("Tersimpan Online!");
+    } catch (err) {
+        console.error(err);
+        alert("Gagal menyimpan ke Firebase. Periksa koneksi atau Rules Firestore.");
     }
 }
 
 async function resetData() {
-    if (confirm("Kembalikan semua teks dan foto ke pengaturan awal?")) {
+    if (!currentUser) return;
+    if (confirm("Kembalikan semua teks dan konten ke pengaturan awal?")) {
         db = structuredClone(defaultDB);
         renderUI();
         await saveData(true);
@@ -324,83 +530,7 @@ function showToast(msg) {
 }
 
 // =========================================================================
-// 6. UPLOAD & KOMPRESI GAMBAR
-// =========================================================================
-function compressImage(file, maxW, quality, callback) {
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            let w = img.width;
-            let h = img.height;
-            if (w > maxW) {
-                h = Math.round((h * maxW) / w);
-                w = maxW;
-            }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, w, h);
-            callback(canvas.toDataURL("image/jpeg", quality));
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
-function setupUploadListeners() {
-    const inputAvatar = document.getElementById("input-avatar");
-    if (inputAvatar) {
-        inputAvatar.addEventListener("change", e => {
-            if (e.target.files[0]) {
-                compressImage(e.target.files[0], 500, 0.88, res => {
-                    db.avatar = res;
-                    renderUI();
-                    saveData();
-                });
-            }
-        });
-    }
-
-    const inputBg = document.getElementById("input-bg");
-    if (inputBg) {
-        inputBg.addEventListener("change", e => {
-            if (e.target.files[0]) {
-                compressImage(e.target.files[0], 1400, 0.85, res => {
-                    db.bg = res;
-                    renderUI();
-                    saveData();
-                });
-            }
-        });
-    }
-
-    const formProyek = document.getElementById("form-proyek");
-    if (formProyek) {
-        formProyek.addEventListener("submit", e => {
-            e.preventDefault();
-            const file = document.getElementById("proj-img").files[0];
-            if (file) {
-                compressImage(file, 900, 0.85, imgData => {
-                    db.projects.unshift({
-                        id: Date.now(),
-                        title: document.getElementById("proj-title").value,
-                        tag: document.getElementById("proj-tag").value.toUpperCase(),
-                        image: imgData
-                    });
-                    document.getElementById("modal-proyek").classList.remove("active");
-                    formProyek.reset();
-                    renderProjects();
-                    saveData();
-                });
-            }
-        });
-    }
-}
-
-// =========================================================================
-// 7. MODAL IKON & GALERI PROYEK
+// 10. MODAL IKON & ANIMASI PARTIKEL
 // =========================================================================
 function renderIconModal() {
     const grid = document.getElementById("icon-grid");
@@ -413,40 +543,12 @@ function renderIconModal() {
             db.icons[targetIconEl.getAttribute("data-icon")] = cls;
             document.getElementById("modal-ikon").classList.remove("active");
             renderUI();
-            saveData();
+            saveData(true);
         };
         grid.appendChild(btn);
     });
 }
 
-function renderProjects() {
-    const grid = document.getElementById("projects-grid");
-    if (!grid) return;
-    grid.innerHTML = "";
-    db.projects.forEach(p => {
-        grid.innerHTML += `
-            <div class="glass-card project-card">
-                <button class="btn-delete-proj" onclick="deleteProject(${p.id})"><i class="fas fa-trash"></i></button>
-                <img src="${p.image}" class="project-thumb" alt="${p.title}">
-                <div class="project-body">
-                    <span class="project-tag">${p.tag}</span>
-                    <h3 style="font-size:16px; margin-bottom:5px;">${p.title}</h3>
-                </div>
-            </div>`;
-    });
-}
-
-function deleteProject(id) {
-    if (confirm("Hapus proyek ini?")) {
-        db.projects = db.projects.filter(p => p.id !== id);
-        renderProjects();
-        saveData();
-    }
-}
-
-// =========================================================================
-// 8. ANIMASI SCROLL, PARTIKEL CANVAS & EFEK KETIK
-// =========================================================================
 function initAnimations() {
     const revealObserver = new IntersectionObserver(entries => {
         entries.forEach(e => {
@@ -544,7 +646,7 @@ function initAnimations() {
 }
 
 // =========================================================================
-// 9. INISIALISASI GLOBAL
+// 11. INISIALISASI GLOBAL
 // =========================================================================
 window.toggleEditMode = toggleEditMode;
 window.cycleTheme = cycleTheme;
@@ -552,10 +654,15 @@ window.saveData = saveData;
 window.resetData = resetData;
 window.deleteProject = deleteProject;
 window.copyContact = copyContact;
+window.promptMediaUrl = promptMediaUrl;
+window.openProjectModal = openProjectModal;
+window.toggleFormInputs = toggleFormInputs;
+window.openPreview = openPreview;
+window.closePreview = closePreview;
 
 async function init() {
     injectLoginModal();
-    setupUploadListeners();
+    setupFormListener();
     initAnimations();
 
     if (isFirebaseReady && auth) {
