@@ -1,6 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { 
+    getFirestore, doc, getDoc, setDoc, deleteDoc, 
+    collection, getDocs, query, orderBy, onSnapshot 
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. KONFIGURASI FIREBASE
@@ -48,7 +51,7 @@ const iconList = [
     "fa-envelope", "fa-phone", "fa-brands fa-whatsapp", "fa-brands fa-github", "fa-brands fa-linkedin", "fa-brands fa-instagram"
 ];
 
-const defaultDB = {
+const defaultProfile = {
     avatar: defaultAvatar,
     bg: "",
     themeIdx: 0,
@@ -57,28 +60,18 @@ const defaultDB = {
         terminalTitle: "Informasi Siswa",
         copyrightText: "© 2026 TJKT Hkmmz Portofolio"
     },
-    icons: {},
-    projects: [
-        {
-            id: 1,
-            type: "image",
-            title: "Topologi Jaringan Lab",
-            tag: "MIKROTIK",
-            desc: "Perancangan topologi jaringan lokal menggunakan router MikroTik, manajemen VLAN, dan pembagian bandwidth client.",
-            url: defaultProjImg,
-            ext: ""
-        }
-    ]
+    icons: {}
 };
 
-let db = structuredClone(defaultDB);
+let profileData = structuredClone(defaultProfile);
+let projectItems = [];
 let isEditMode = false;
 let currentUser = null;
 let targetIconEl = null;
 let mouse = { x: null, y: null };
 
 // =========================================================================
-// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA (TIKTOK / YT / DRIVE)
+// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA
 // =========================================================================
 function processHighQualityImage(file, maxW, quality, callback) {
     const reader = new FileReader();
@@ -124,31 +117,21 @@ function getDirectImageUrl(url) {
 
 function getEmbedVideoInfo(url) {
     const cleanUrl = url.trim();
-
-    // 1. Cek YouTube (youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)
     const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
         return { kind: "iframe", src: `https://www.youtube.com/embed/${ytMatch[1]}` };
     }
-
-    // 2. Cek TikTok URL Penuh (https://www.tiktok.com/@username/video/1234567890123456789)
     const tiktokMatch = cleanUrl.match(/tiktok\.com\/.*\/video\/(\d+)/);
     if (tiktokMatch) {
         return { kind: "iframe", src: `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}` };
     }
-
-    // 3. Cek Link Pendek TikTok (vt.tiktok.com / vm.tiktok.com)
     if (cleanUrl.includes("tiktok.com")) {
         return { kind: "external-video", src: cleanUrl };
     }
-
-    // 4. Cek Google Drive Video
     const driveId = extractDriveId(cleanUrl);
     if (driveId) {
         return { kind: "iframe", src: `https://drive.google.com/file/d/${driveId}/preview` };
     }
-
-    // 5. Direct MP4 / WebM
     return { kind: "video", src: cleanUrl };
 }
 
@@ -164,50 +147,70 @@ function getFileIcon(ext) {
 }
 
 // =========================================================================
-// 4. MUAT DATA DARI FIRESTORE & RENDER UI
+// 4. SINKRONISASI REAL-TIME FIRESTORE (PROFIL + SUB-KOLEKSI KARYA)
 // =========================================================================
-async function loadData() {
-    if (isFirebaseReady) {
-        try {
-            const docSnap = await getDoc(doc(firestore, "portfolio", "main"));
-            if (docSnap.exists()) {
-                const cloudData = docSnap.data();
-                db = {
-                    ...structuredClone(defaultDB),
-                    ...cloudData,
-                    texts: { ...defaultDB.texts, ...(cloudData.texts || {}) },
-                    icons: { ...(cloudData.icons || {}) }
-                };
-            }
-        } catch (err) {
-            console.error("Gagal memuat Firestore:", err);
-        }
+function initRealtimeSync() {
+    if (!isFirebaseReady) {
+        renderUI();
+        return;
     }
-    renderUI();
+
+    // 1. Sinkronisasi Profil & Pengaturan Teks (portfolio/main)
+    onSnapshot(doc(firestore, "portfolio", "main"), (docSnap) => {
+        if (docSnap.exists()) {
+            const cloudData = docSnap.data();
+            profileData = {
+                ...structuredClone(defaultProfile),
+                avatar: cloudData.avatar || defaultAvatar,
+                bg: cloudData.bg || "",
+                themeIdx: cloudData.themeIdx ?? 0,
+                texts: { ...defaultProfile.texts, ...(cloudData.texts || {}) },
+                icons: { ...(cloudData.icons || {}) }
+            };
+        }
+        renderUI();
+    }, (err) => {
+        console.error("Gagal membaca profil dari Firestore:", err);
+        renderUI();
+    });
+
+    // 2. Sinkronisasi Koleksi Karya & File Tanpa Batas Jumlah (portfolio/main/items)
+    const itemsQuery = query(collection(firestore, "portfolio", "main", "items"), orderBy("createdAt", "desc"));
+    onSnapshot(itemsQuery, (querySnap) => {
+        projectItems = [];
+        querySnap.forEach((docItem) => {
+            projectItems.push({ docId: docItem.id, ...docItem.data() });
+        });
+        renderProjects();
+    }, (err) => {
+        console.error("Gagal membaca daftar karya:", err);
+    });
 }
 
 function renderUI() {
     applyTheme();
 
     const profileImg = document.getElementById("profile-img");
-    if (profileImg) profileImg.src = db.avatar || defaultAvatar;
+    if (profileImg) profileImg.src = profileData.avatar || defaultAvatar;
 
     const heroBg = document.getElementById("hero-bg");
     if (heroBg) {
-        heroBg.style.backgroundImage = db.bg ? `url("${db.bg}")` : "none";
+        heroBg.style.backgroundImage = profileData.bg ? `url("${profileData.bg}")` : "none";
     }
 
-    document.querySelectorAll(".editable").forEach(el => {
-        const key = el.getAttribute("data-key");
-        if (key && db.texts[key]) {
-            el.innerText = db.texts[key];
-        }
-    });
+    if (!isEditMode) {
+        document.querySelectorAll(".editable").forEach(el => {
+            const key = el.getAttribute("data-key");
+            if (key && profileData.texts[key]) {
+                el.innerText = profileData.texts[key];
+            }
+        });
+    }
 
     document.querySelectorAll(".edit-icon").forEach(el => {
         const key = el.getAttribute("data-icon");
-        if (key && db.icons[key]) {
-            const cls = db.icons[key];
+        if (key && profileData.icons[key]) {
+            const cls = profileData.icons[key];
             el.className = `edit-icon ${cls.includes("brands") ? cls : "fas " + cls}`;
         }
 
@@ -218,24 +221,102 @@ function renderUI() {
             document.getElementById("modal-ikon").classList.add("active");
         };
     });
-
-    renderProjects();
 }
 
 function applyTheme() {
-    const theme = themes[db.themeIdx] || themes[0];
+    const theme = themes[profileData.themeIdx] || themes[0];
     document.documentElement.style.setProperty("--accent", theme.hex);
     document.documentElement.style.setProperty("--accent-glow", theme.glow);
 }
 
 function cycleTheme() {
-    db.themeIdx = (db.themeIdx + 1) % themes.length;
+    profileData.themeIdx = (profileData.themeIdx + 1) % themes.length;
     applyTheme();
-    showToast(`Tema: ${themes[db.themeIdx].name}`);
+    saveProfileData(false);
+    showToast(`Tema: ${themes[profileData.themeIdx].name}`);
 }
 
 // =========================================================================
-// 5. LOGIN ADMIN & MODE EDIT
+// 5. SIMPAN PROFIL & SIMPAN KARYA SECARA TERPISAH (ANTI-HILANG)
+// =========================================================================
+async function saveProfileData(notify = true) {
+    if (!isFirebaseReady || !currentUser) {
+        alert("Anda harus login sebagai admin terlebih dahulu.");
+        return;
+    }
+
+    document.querySelectorAll(".editable").forEach(el => {
+        const key = el.getAttribute("data-key");
+        if (key) {
+            profileData.texts[key] = el.innerText.trim();
+        }
+    });
+
+    const payloadSize = new Blob([JSON.stringify(profileData)]).size;
+    if (payloadSize > 950000) {
+        alert("Ukuran foto profil + latar belakang melebihi 1MB. Gunakan foto dengan ukuran lebih kecil.");
+        return;
+    }
+
+    try {
+        if (notify) showToast("Menyimpan profil...");
+        await setDoc(doc(firestore, "portfolio", "main"), profileData);
+        if (notify) showToast("Profil Tersimpan Online!");
+    } catch (err) {
+        console.error("Error simpan profil:", err);
+        alert("Gagal menyimpan profil: " + err.message);
+    }
+}
+
+async function saveSingleProjectItem(itemObj) {
+    if (!isFirebaseReady || !currentUser) {
+        alert("Anda harus login sebagai admin untuk menambah konten.");
+        return false;
+    }
+
+    const itemSize = new Blob([JSON.stringify(itemObj)]).size;
+    if (itemSize > 980000) {
+        alert("Ukuran file foto ini terlalu besar (>1MB). Gunakan opsi 'Link Gambar HD' dari Google Drive untuk foto berukuran sangat besar.");
+        return false;
+    }
+
+    try {
+        showToast("Mengunggah ke server...");
+        const itemId = String(itemObj.id);
+        await setDoc(doc(firestore, "portfolio", "main", "items", itemId), itemObj);
+        showToast("Berhasil Tersimpan Permanen!");
+        return true;
+    } catch (err) {
+        console.error("Error simpan item:", err);
+        alert("Gagal mengunggah ke server Firebase: " + err.message);
+        return false;
+    }
+}
+
+async function deleteProject(id) {
+    if (!currentUser) return;
+    if (confirm("Hapus item ini secara permanen?")) {
+        try {
+            showToast("Menghapus...");
+            await deleteDoc(doc(firestore, "portfolio", "main", "items", String(id)));
+            showToast("Item dihapus.");
+        } catch (err) {
+            alert("Gagal menghapus item: " + err.message);
+        }
+    }
+}
+
+async function resetData() {
+    if (!currentUser) return;
+    if (confirm("Kembalikan teks profil, foto profil, dan tema ke pengaturan awal? (Galeri karya tidak ikut terhapus)")) {
+        profileData = structuredClone(defaultProfile);
+        renderUI();
+        await saveProfileData(true);
+    }
+}
+
+// =========================================================================
+// 6. LOGIN ADMIN & MODE EDIT
 // =========================================================================
 function injectLoginModal() {
     if (document.getElementById("modal-admin-login")) return;
@@ -307,7 +388,7 @@ function toggleEditMode() {
     const nextState = !isEditMode;
     setEditState(nextState);
     if (!nextState) {
-        saveData(true);
+        saveProfileData(true);
     }
 }
 
@@ -332,7 +413,7 @@ async function logoutAdmin() {
 }
 
 // =========================================================================
-// 6. UNGGAH FOTO PROFIL, BACKGROUND & KARYA LANGSUNG
+// 7. FORM UNGGAH KONTEN (FOTO LANGSUNG / LINK HD / TIKTOK / YT / FILE)
 // =========================================================================
 function openProjectModal() {
     document.getElementById("form-proyek").reset();
@@ -382,99 +463,117 @@ function toggleFormInputs() {
 }
 
 function setupUploadListeners() {
-    // Unggah Foto Profil Langsung (HD 550px, kualitas 92%)
     const inputAvatar = document.getElementById("input-avatar");
     if (inputAvatar) {
         inputAvatar.addEventListener("change", e => {
             if (e.target.files[0]) {
-                processHighQualityImage(e.target.files[0], 550, 0.92, res => {
-                    db.avatar = res;
+                processHighQualityImage(e.target.files[0], 500, 0.90, async res => {
+                    profileData.avatar = res;
                     renderUI();
-                    saveData(true);
+                    await saveProfileData(true);
                 });
             }
         });
     }
 
-    // Unggah Latar Belakang Langsung (HD 1366px, kualitas 88%)
     const inputBg = document.getElementById("input-bg");
     if (inputBg) {
         inputBg.addEventListener("change", e => {
             if (e.target.files[0]) {
-                processHighQualityImage(e.target.files[0], 1366, 0.88, res => {
-                    db.bg = res;
+                processHighQualityImage(e.target.files[0], 1280, 0.85, async res => {
+                    profileData.bg = res;
                     renderUI();
-                    saveData(true);
+                    await saveProfileData(true);
                 });
             }
         });
     }
 
-    // Submit Tambah Karya (Unggah Foto Langsung / Link / TikTok / Video / File)
     const formProyek = document.getElementById("form-proyek");
     if (!formProyek) return;
 
-    formProyek.addEventListener("submit", e => {
+    formProyek.addEventListener("submit", async e => {
         e.preventDefault();
+        const submitBtn = formProyek.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan ke Cloud...`;
+
         const type = document.getElementById("proj-type").value;
         const title = document.getElementById("proj-title").value.trim();
         const tag = document.getElementById("proj-tag").value.trim().toUpperCase();
         const desc = document.getElementById("proj-desc").value.trim();
         const ext = document.getElementById("proj-ext").value.trim().toUpperCase() || "FILE";
+        const now = Date.now();
 
         if (type === "image-file") {
             const file = document.getElementById("proj-file-input").files[0];
-            if (!file) return;
-            processHighQualityImage(file, 1200, 0.90, imgData => {
-                db.projects.unshift({
-                    id: Date.now(),
+            if (!file) {
+                submitBtn.disabled = false;
+                return;
+            }
+            processHighQualityImage(file, 1100, 0.88, async imgData => {
+                const newItem = {
+                    id: now,
+                    createdAt: now,
                     type: "image",
                     title,
                     tag,
                     desc,
                     url: imgData,
                     ext: ""
-                });
-                document.getElementById("modal-proyek").classList.remove("active");
-                formProyek.reset();
-                renderProjects();
-                saveData(true);
+                };
+                const ok = await saveSingleProjectItem(newItem);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fas fa-check"></i> Tambahkan ke Galeri`;
+                if (ok) {
+                    document.getElementById("modal-proyek").classList.remove("active");
+                    formProyek.reset();
+                }
             });
         } else {
             const rawUrl = document.getElementById("proj-url").value.trim();
             const normalizedType = type === "image-url" ? "image" : type;
             const finalUrl = normalizedType === "image" ? getDirectImageUrl(rawUrl) : rawUrl;
 
-            db.projects.unshift({
-                id: Date.now(),
+            const newItem = {
+                id: now,
+                createdAt: now,
                 type: normalizedType,
                 title,
                 tag,
                 desc,
                 url: finalUrl,
                 ext: normalizedType === "file" ? ext : ""
-            });
+            };
 
-            document.getElementById("modal-proyek").classList.remove("active");
-            formProyek.reset();
-            renderProjects();
-            saveData(true);
+            const ok = await saveSingleProjectItem(newItem);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i class="fas fa-check"></i> Tambahkan ke Galeri`;
+            if (ok) {
+                document.getElementById("modal-proyek").classList.remove("active");
+                formProyek.reset();
+            }
         }
     });
 }
 
 // =========================================================================
-// 7. RENDER KARTU GALERI & PREVIEW FULLSCREEN
+// 8. RENDER KARTU GALERI & PREVIEW FULLSCREEN
 // =========================================================================
 function renderProjects() {
     const grid = document.getElementById("projects-grid");
     if (!grid) return;
     grid.innerHTML = "";
 
-    db.projects.forEach(p => {
+    if (projectItems.length === 0) {
+        grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 14px;">Belum ada dokumentasi yang diunggah.</p>`;
+        return;
+    }
+
+    projectItems.forEach(p => {
         const type = p.type || "image";
         const mediaUrl = p.url || p.image || defaultProjImg;
-        const descText = p.desc || "Dokumentasi praktikum dan portofolio kompetensi TJKT.";
+        const descText = p.desc || "";
         let mediaHTML = "";
         let badgeHTML = "";
         let actionBtnHTML = "";
@@ -532,7 +631,7 @@ function renderProjects() {
 }
 
 function openPreview(id) {
-    const item = db.projects.find(p => p.id === id);
+    const item = projectItems.find(p => p.id === id);
     if (!item) return;
 
     const container = document.getElementById("preview-media-container");
@@ -563,55 +662,6 @@ function closePreview() {
     document.getElementById("preview-media-container").innerHTML = "";
 }
 
-function deleteProject(id) {
-    if (confirm("Hapus item ini dari galeri?")) {
-        db.projects = db.projects.filter(p => p.id !== id);
-        renderProjects();
-        saveData(true);
-    }
-}
-
-// =========================================================================
-// 8. SIMPAN & RESET DATA KE FIRESTORE
-// =========================================================================
-async function saveData(notify = true) {
-    if (!isFirebaseReady || !currentUser) {
-        alert("Anda harus login sebagai admin untuk menyimpan perubahan.");
-        return;
-    }
-
-    document.querySelectorAll(".editable").forEach(el => {
-        const key = el.getAttribute("data-key");
-        if (key) {
-            db.texts[key] = el.innerText.trim();
-        }
-    });
-
-    const payloadSize = new Blob([JSON.stringify(db)]).size;
-    if (payloadSize > 980000) {
-        alert("Kapasitas penyimpanan langsung hampir penuh (mendekati 1MB). Gunakan opsi 'Link Gambar HD' dari Google Drive untuk foto tambahan, atau hapus foto lama.");
-        return;
-    }
-
-    try {
-        showToast("Menyimpan ke database...");
-        await setDoc(doc(firestore, "portfolio", "main"), db);
-        if (notify) showToast("Tersimpan Online!");
-    } catch (err) {
-        console.error(err);
-        alert("Gagal menyimpan ke Firebase. Periksa koneksi atau Rules Firestore.");
-    }
-}
-
-async function resetData() {
-    if (!currentUser) return;
-    if (confirm("Kembalikan semua teks dan konten ke pengaturan awal?")) {
-        db = structuredClone(defaultDB);
-        renderUI();
-        await saveData(true);
-    }
-}
-
 function copyContact(cardEl) {
     if (isEditMode) return;
     const textEl = cardEl.querySelector(".contact-text");
@@ -639,11 +689,11 @@ function renderIconModal() {
         const btn = document.createElement("button");
         btn.className = "icon-btn";
         btn.innerHTML = `<i class="${cls.includes("brands") ? cls : "fas " + cls}"></i>`;
-        btn.onclick = () => {
-            db.icons[targetIconEl.getAttribute("data-icon")] = cls;
+        btn.onclick = async () => {
+            profileData.icons[targetIconEl.getAttribute("data-icon")] = cls;
             document.getElementById("modal-ikon").classList.remove("active");
             renderUI();
-            saveData(true);
+            await saveProfileData(true);
         };
         grid.appendChild(btn);
     });
@@ -690,7 +740,7 @@ function initAnimations() {
             draw() {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-                ctx.fillStyle = (themes[db.themeIdx] || themes[0]).hex;
+                ctx.fillStyle = (themes[profileData.themeIdx] || themes[0]).hex;
                 ctx.fill();
             }
         }
@@ -729,7 +779,7 @@ function initAnimations() {
             setTimeout(typeEffect, 300);
             return;
         }
-        const txt = db.texts["roleText"] || "Siap Belajar";
+        const txt = profileData.texts["roleText"] || "Siap Belajar";
         el.textContent = txt.substring(0, isDel ? charIdx - 1 : charIdx + 1);
         charIdx += isDel ? -1 : 1;
         if (!isDel && charIdx === txt.length) {
@@ -750,7 +800,7 @@ function initAnimations() {
 // =========================================================================
 window.toggleEditMode = toggleEditMode;
 window.cycleTheme = cycleTheme;
-window.saveData = saveData;
+window.saveData = () => saveProfileData(true);
 window.resetData = resetData;
 window.deleteProject = deleteProject;
 window.copyContact = copyContact;
@@ -759,7 +809,7 @@ window.toggleFormInputs = toggleFormInputs;
 window.openPreview = openPreview;
 window.closePreview = closePreview;
 
-async function init() {
+function init() {
     injectLoginModal();
     setupUploadListeners();
     initAnimations();
@@ -770,7 +820,7 @@ async function init() {
         });
     }
 
-    await loadData();
+    initRealtimeSync();
 }
 
 if (document.readyState === "loading") {
