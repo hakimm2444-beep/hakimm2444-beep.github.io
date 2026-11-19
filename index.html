@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hkmmz Portofolio | TJKT</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -132,15 +132,18 @@
             </div>
 
             <div class="gallery-layout reveal">
-                <!-- Sidebar Filter Guru -->
+                <!-- Sidebar Filter Guru (Bisa Diedit & Ditambah Kolom) -->
                 <aside class="glass-card teacher-sidebar">
                     <div class="sidebar-header">
-                        <i class="fas fa-chalkboard-user"></i>
-                        <span>Filter Tugas Guru</span>
+                        <i class="fas fa-chalkboard-user edit-icon" data-icon="iconSidebar"></i>
+                        <span class="editable" data-key="sidebarTitle">Filter Tugas Guru</span>
                     </div>
                     <div class="sidebar-list" id="teacher-filter-list">
                         <!-- Tombol filter guru dirender otomatis -->
                     </div>
+                    <button class="edit-only btn-add-sidebar-col" onclick="addSidebarColumn()">
+                        <i class="fas fa-plus-circle"></i> Tambah Kolom Sidebar
+                    </button>
                 </aside>
 
                 <!-- Area Kartu Galeri -->
@@ -193,7 +196,7 @@
         </div>
     </div>
 
-    <!-- Modal Tambah Karya (Unggah Foto Langsung / Video / File + Nama Guru) -->
+    <!-- Modal Tambah Karya -->
     <div id="modal-proyek" class="modal">
         <div class="modal-content glass-card">
             <div class="modal-header">
@@ -201,17 +204,17 @@
                 <button class="close-modal" onclick="this.closest('.modal').classList.remove('active')">&times;</button>
             </div>
             <form id="form-proyek">
-                <label>Nama Guru Pengampu / Pemberi Tugas</label>
-                <input type="text" id="proj-teacher" list="teacher-suggestions" placeholder="Contoh: Pak Budi / Bu Siti / Mandiri" required>
+                <label>Kolom Sidebar / Nama Guru</label>
+                <input type="text" id="proj-teacher" list="teacher-suggestions" placeholder="Pilih atau ketik nama guru / kategori..." required>
                 <datalist id="teacher-suggestions"></datalist>
-                <small class="form-help">Nama guru otomatis muncul di sidebar kiri untuk memilah tugas.</small>
+                <small class="form-help">Otomatis masuk ke kolom sidebar yang sesuai.</small>
 
                 <label>Jenis Konten</label>
                 <select id="proj-type" onchange="toggleFormInputs()">
                     <option value="image-file">Unggah Foto Langsung (Dari Galeri / Laptop)</option>
                     <option value="image-url">Link Gambar HD (Google Drive / Imgur)</option>
                     <option value="video">Video (TikTok / YouTube / Google Drive / MP4)</option>
-                    <option value="file">File Dokumen / Konfigurasi (PDF, PKT, RSC, ZIP, DOCX)</option>
+                    <option value="file">File / Folder Google Drive / Dokumen (PDF, PKT, RSC, ZIP)</option>
                 </select>
 
                 <!-- Input File Gambar Langsung -->
@@ -230,8 +233,8 @@
 
                 <!-- Input Ekstensi File -->
                 <div id="file-ext-group" style="display: none;">
-                    <label>Format / Ekstensi File</label>
-                    <input type="text" id="proj-ext" placeholder="Contoh: PDF, PKT (Packet Tracer), RSC, ZIP">
+                    <label>Format / Label File</label>
+                    <input type="text" id="proj-ext" placeholder="Contoh: FOLDER DRIVE, PDF, PKT, RSC, ZIP">
                 </div>
 
                 <label>Judul Karya / Tugas</label>

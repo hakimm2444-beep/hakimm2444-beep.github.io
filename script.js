@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { 
-    getFirestore, doc, setDoc, deleteDoc, 
+    getFirestore, doc, setDoc, deleteDoc, writeBatch,
     collection, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
@@ -48,6 +48,7 @@ const themes = [
 const iconList = [
     "fa-network-wired", "fa-server", "fa-ethernet", "fa-wifi", "fa-microchip", "fa-database",
     "fa-shield-halved", "fa-laptop-code", "fa-code-branch", "fa-terminal", "fa-cloud",
+    "fa-chalkboard-user", "fa-user-tie", "fa-folder-open", "fa-book", "fa-graduation-cap",
     "fa-envelope", "fa-phone", "fa-brands fa-whatsapp", "fa-brands fa-github", "fa-brands fa-linkedin", "fa-brands fa-instagram"
 ];
 
@@ -55,9 +56,12 @@ const defaultProfile = {
     avatar: defaultAvatar,
     bg: "",
     themeIdx: 0,
+    sidebarAllLabel: "Semua Tugas",
+    customTeachers: [],
     texts: {
         roleText: "Siap Belajar",
         terminalTitle: "Informasi Siswa",
+        sidebarTitle: "Filter Tugas Guru",
         copyrightText: "© 2026 TJKT Hkmmz Portofolio"
     },
     icons: {}
@@ -96,6 +100,10 @@ function processHighQualityImage(file, maxW, quality, callback) {
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+}
+
+function isDriveFolderUrl(url) {
+    return /drive\.google\.com\/drive\/folders\//i.test(url || "");
 }
 
 function extractDriveId(url) {
@@ -137,6 +145,7 @@ function getEmbedVideoInfo(url) {
 
 function getFileIcon(ext) {
     const e = (ext || "").toUpperCase();
+    if (e.includes("FOLDER")) return "fa-folder-open";
     if (e.includes("PDF")) return "fa-file-pdf";
     if (e.includes("DOC")) return "fa-file-word";
     if (e.includes("XLS") || e.includes("CSV")) return "fa-file-excel";
@@ -165,11 +174,15 @@ function initRealtimeSync() {
                 avatar: cloudData.avatar || defaultAvatar,
                 bg: cloudData.bg || "",
                 themeIdx: cloudData.themeIdx ?? 0,
+                sidebarAllLabel: cloudData.sidebarAllLabel || "Semua Tugas",
+                customTeachers: Array.isArray(cloudData.customTeachers) ? cloudData.customTeachers : [],
                 texts: { ...defaultProfile.texts, ...(cloudData.texts || {}) },
                 icons: { ...(cloudData.icons || {}) }
             };
         }
         renderUI();
+        renderTeacherSidebar();
+        renderProjects();
     }, (err) => {
         console.error("Gagal membaca profil:", err);
         renderUI();
@@ -242,7 +255,7 @@ function cycleTheme() {
 }
 
 // =========================================================================
-// 5. SIDEBAR FILTER GURU (OTOMATIS MEMILAH TUGAS PER GURU)
+// 5. SIDEBAR FILTER GURU (EDIT NAMA, TAMBAH KOLOM, HAPUS KOLOM)
 // =========================================================================
 function normalizeTeacherName(raw) {
     const clean = (raw || "").trim();
@@ -254,8 +267,18 @@ function renderTeacherSidebar() {
     const datalistEl = document.getElementById("teacher-suggestions");
     if (!listEl) return;
 
-    // Hitung jumlah tugas per guru (case-insensitive grouping)
     const teacherMap = new Map();
+
+    // 1. Masukkan kolom kustom yang dibuat manual dari sidebar
+    (profileData.customTeachers || []).forEach(name => {
+        const clean = normalizeTeacherName(name);
+        const key = clean.toLowerCase();
+        if (!teacherMap.has(key)) {
+            teacherMap.set(key, { label: clean, count: 0 });
+        }
+    });
+
+    // 2. Masukkan & hitung jumlah tugas dari item yang ada
     projectItems.forEach(item => {
         const name = normalizeTeacherName(item.teacher);
         const key = name.toLowerCase();
@@ -265,32 +288,43 @@ function renderTeacherSidebar() {
         teacherMap.get(key).count += 1;
     });
 
-    // Reset filter jika guru yang sedang dipilih sudah dihapus semua tugasnya
     if (activeTeacherFilter !== "ALL" && !teacherMap.has(activeTeacherFilter.toLowerCase())) {
         activeTeacherFilter = "ALL";
     }
 
-    // Render tombol "Semua Tugas"
-    let html = `
-        <button class="sidebar-btn ${activeTeacherFilter === "ALL" ? "active" : ""}" onclick="setTeacherFilter('ALL')">
-            <span class="sidebar-btn-label"><i class="fas fa-layer-group"></i> Semua Tugas</span>
-            <span class="sidebar-badge">${projectItems.length}</span>
-        </button>`;
+    const allLabel = profileData.sidebarAllLabel || "Semua Tugas";
 
-    // Render tombol untuk masing-masing guru
+    // Baris pertama: "Semua Tugas" (Bisa diedit teksnya)
+    let html = `
+        <div class="sidebar-item-row">
+            <button class="sidebar-btn ${activeTeacherFilter === "ALL" ? "active" : ""}" onclick="setTeacherFilter('ALL')">
+                <span class="sidebar-btn-label"><i class="fas fa-layer-group"></i> ${allLabel}</span>
+                <span class="sidebar-badge">${projectItems.length}</span>
+            </button>
+            <div class="sidebar-mini-actions">
+                <button class="btn-sidebar-icon" onclick="renameAllSidebarLabel()" title="Ganti Teks"><i class="fas fa-pen"></i></button>
+            </div>
+        </div>`;
+
+    // Baris kolom per guru / kategori
     teacherMap.forEach((info) => {
         const isActive = activeTeacherFilter.toLowerCase() === info.label.toLowerCase();
         const escapedLabel = info.label.replace(/'/g, "\\'");
         html += `
-            <button class="sidebar-btn ${isActive ? "active" : ""}" onclick="setTeacherFilter('${escapedLabel}')">
-                <span class="sidebar-btn-label"><i class="fas fa-user-tie"></i> ${info.label}</span>
-                <span class="sidebar-badge">${info.count}</span>
-            </button>`;
+            <div class="sidebar-item-row">
+                <button class="sidebar-btn ${isActive ? "active" : ""}" onclick="setTeacherFilter('${escapedLabel}')">
+                    <span class="sidebar-btn-label"><i class="fas fa-user-tie"></i> ${info.label}</span>
+                    <span class="sidebar-badge">${info.count}</span>
+                </button>
+                <div class="sidebar-mini-actions">
+                    <button class="btn-sidebar-icon" onclick="renameSidebarColumn('${escapedLabel}')" title="Ubah Nama Kolom"><i class="fas fa-pen"></i></button>
+                    <button class="btn-sidebar-icon del" onclick="deleteSidebarColumn('${escapedLabel}')" title="Hapus Kolom"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
     });
 
     listEl.innerHTML = html;
 
-    // Isi saran autocomplete pada form tambah tugas
     if (datalistEl) {
         datalistEl.innerHTML = "";
         teacherMap.forEach((info) => {
@@ -303,6 +337,109 @@ function setTeacherFilter(teacherName) {
     activeTeacherFilter = teacherName;
     renderTeacherSidebar();
     renderProjects();
+}
+
+async function renameAllSidebarLabel() {
+    if (!currentUser) return;
+    const current = profileData.sidebarAllLabel || "Semua Tugas";
+    const next = prompt("Ganti tulisan menu utama sidebar:", current);
+    if (next && next.trim() !== "") {
+        profileData.sidebarAllLabel = next.trim();
+        renderTeacherSidebar();
+        renderProjects();
+        await saveProfileData(true);
+    }
+}
+
+async function addSidebarColumn() {
+    if (!currentUser) return;
+    const name = prompt("Masukkan nama kolom / guru baru untuk sidebar (contoh: Pak Budi / Bu Siti):");
+    if (!name || !name.trim()) return;
+
+    const cleanName = name.trim();
+    const list = profileData.customTeachers || [];
+    const exists = list.some(t => t.toLowerCase() === cleanName.toLowerCase()) ||
+                   projectItems.some(p => normalizeTeacherName(p.teacher).toLowerCase() === cleanName.toLowerCase());
+
+    if (exists) {
+        showToast("Kolom sudah ada di sidebar!");
+        return;
+    }
+
+    profileData.customTeachers = [...list, cleanName];
+    activeTeacherFilter = cleanName;
+    renderTeacherSidebar();
+    renderProjects();
+    await saveProfileData(true);
+}
+
+async function renameSidebarColumn(oldName) {
+    if (!currentUser) return;
+    const newNameRaw = prompt(`Ubah nama kolom "${oldName}" menjadi:`, oldName);
+    if (!newNameRaw || !newNameRaw.trim() || newNameRaw.trim() === oldName) return;
+
+    const newName = newNameRaw.trim();
+
+    // 1. Perbarui daftar customTeachers
+    const updatedCustom = (profileData.customTeachers || []).map(t =>
+        t.toLowerCase() === oldName.toLowerCase() ? newName : t
+    );
+    if (!updatedCustom.some(t => t.toLowerCase() === newName.toLowerCase())) {
+        updatedCustom.push(newName);
+    }
+    profileData.customTeachers = updatedCustom;
+
+    // 2. Perbarui semua kartu tugas yang berada di kolom tersebut
+    const matchingItems = projectItems.filter(
+        p => normalizeTeacherName(p.teacher).toLowerCase() === oldName.toLowerCase()
+    );
+
+    if (matchingItems.length > 0 && isFirebaseReady) {
+        const batch = writeBatch(firestore);
+        matchingItems.forEach(item => {
+            const ref = doc(firestore, "portfolio", "main", "items", String(item.docId || item.id));
+            batch.update(ref, { teacher: newName });
+        });
+        await batch.commit();
+    }
+
+    if (activeTeacherFilter.toLowerCase() === oldName.toLowerCase()) {
+        activeTeacherFilter = newName;
+    }
+
+    await saveProfileData(true);
+}
+
+async function deleteSidebarColumn(colName) {
+    if (!currentUser) return;
+    const matchingItems = projectItems.filter(
+        p => normalizeTeacherName(p.teacher).toLowerCase() === colName.toLowerCase()
+    );
+
+    const msg = matchingItems.length > 0
+        ? `Hapus kolom "${colName}" dari sidebar? (${matchingItems.length} tugas di dalamnya akan dipindahkan ke "Umum / Mandiri")`
+        : `Hapus kolom "${colName}" dari sidebar?`;
+
+    if (!confirm(msg)) return;
+
+    profileData.customTeachers = (profileData.customTeachers || []).filter(
+        t => t.toLowerCase() !== colName.toLowerCase()
+    );
+
+    if (matchingItems.length > 0 && isFirebaseReady) {
+        const batch = writeBatch(firestore);
+        matchingItems.forEach(item => {
+            const ref = doc(firestore, "portfolio", "main", "items", String(item.docId || item.id));
+            batch.update(ref, { teacher: "Umum / Mandiri" });
+        });
+        await batch.commit();
+    }
+
+    if (activeTeacherFilter.toLowerCase() === colName.toLowerCase()) {
+        activeTeacherFilter = "ALL";
+    }
+
+    await saveProfileData(true);
 }
 
 // =========================================================================
@@ -328,9 +465,9 @@ async function saveProfileData(notify = true) {
     }
 
     try {
-        if (notify) showToast("Menyimpan profil...");
+        if (notify) showToast("Menyimpan perubahan...");
         await setDoc(doc(firestore, "portfolio", "main"), profileData);
-        if (notify) showToast("Profil Tersimpan Online!");
+        if (notify) showToast("Tersimpan Online!");
     } catch (err) {
         console.error("Error simpan profil:", err);
         alert("Gagal menyimpan profil: " + err.message);
@@ -482,7 +619,7 @@ async function logoutAdmin() {
 }
 
 // =========================================================================
-// 8. FORM UNGGAH KONTEN (FOTO LANGSUNG / LINK HD / TIKTOK / YT / FILE)
+// 8. FORM UNGGAH KONTEN
 // =========================================================================
 function openProjectModal() {
     document.getElementById("form-proyek").reset();
@@ -526,9 +663,9 @@ function toggleFormInputs() {
             helpUrl.textContent = "Mendukung link video TikTok, YouTube, YouTube Shorts, atau video MP4 Google Drive.";
             extGroup.style.display = "none";
         } else {
-            labelUrl.textContent = "Link File (Google Drive / GitHub)";
-            urlInput.placeholder = "https://drive.google.com/file/d/...";
-            helpUrl.textContent = "Mendukung semua format file: PDF, DOCX, PPTX, ZIP, Packet Tracer (.pkt), MikroTik (.rsc), dll.";
+            labelUrl.textContent = "Link File atau Folder Google Drive";
+            urlInput.placeholder = "https://drive.google.com/...";
+            helpUrl.textContent = "Mendukung link Folder Google Drive, PDF, DOCX, PPTX, ZIP, Packet Tracer (.pkt), MikroTik (.rsc), dll.";
             extGroup.style.display = "block";
         }
     }
@@ -606,8 +743,11 @@ function setupUploadListeners() {
             });
         } else {
             const rawUrl = document.getElementById("proj-url").value.trim();
-            const normalizedType = type === "image-url" ? "image" : type;
+            // Jika user memasukkan link folder Google Drive pada tipe gambar, otomatis tampilkan sebagai folder
+            const isFolder = isDriveFolderUrl(rawUrl);
+            const normalizedType = isFolder ? "file" : (type === "image-url" ? "image" : type);
             const finalUrl = normalizedType === "image" ? getDirectImageUrl(rawUrl) : rawUrl;
+            const finalExt = isFolder ? "FOLDER DRIVE" : (normalizedType === "file" ? ext : "");
 
             const newItem = {
                 id: now,
@@ -618,7 +758,7 @@ function setupUploadListeners() {
                 tag,
                 desc,
                 url: finalUrl,
-                ext: normalizedType === "file" ? ext : ""
+                ext: finalExt
             };
 
             const ok = await saveSingleProjectItem(newItem);
@@ -646,7 +786,9 @@ function renderProjects() {
         : projectItems.filter(p => normalizeTeacherName(p.teacher).toLowerCase() === activeTeacherFilter.toLowerCase());
 
     if (filterLabelEl) {
-        filterLabelEl.textContent = activeTeacherFilter === "ALL" ? "Semua Tugas" : `Tugas: ${activeTeacherFilter}`;
+        filterLabelEl.textContent = activeTeacherFilter === "ALL"
+            ? (profileData.sidebarAllLabel || "Semua Tugas")
+            : activeTeacherFilter;
     }
     if (filterCountEl) {
         filterCountEl.textContent = `${filteredItems.length} item`;
@@ -655,14 +797,15 @@ function renderProjects() {
     grid.innerHTML = "";
 
     if (filteredItems.length === 0) {
-        grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 14px; padding: 30px 0;">Belum ada dokumentasi tugas untuk kategori ini.</p>`;
+        grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 14px; padding: 30px 0;">Belum ada dokumentasi tugas di kolom ini.</p>`;
         return;
     }
 
     filteredItems.forEach(p => {
-        const type = p.type || "image";
-        const teacherLabel = normalizeTeacherName(p.teacher);
         const mediaUrl = p.url || p.image || defaultProjImg;
+        const isFolder = isDriveFolderUrl(mediaUrl);
+        const type = isFolder ? "file" : (p.type || "image");
+        const teacherLabel = normalizeTeacherName(p.teacher);
         const descText = p.desc || "";
         let mediaHTML = "";
         let badgeHTML = "";
@@ -690,15 +833,15 @@ function renderProjects() {
                 actionBtnHTML = `<button class="btn-card-action" onclick="openPreview(${p.id})"><i class="fas fa-play"></i> Putar Layar Penuh</button>`;
             }
         } else {
-            const extLabel = p.ext || "DOKUMEN";
+            const extLabel = isFolder ? "FOLDER DRIVE" : (p.ext || "DOKUMEN");
             const iconCls = getFileIcon(extLabel);
-            badgeHTML = `<span class="media-type-pill"><i class="fas fa-file"></i> FILE</span>`;
+            badgeHTML = `<span class="media-type-pill"><i class="fas ${isFolder ? 'fa-folder' : 'fa-file'}"></i> ${isFolder ? 'FOLDER' : 'FILE'}</span>`;
             mediaHTML = `
                 <div class="file-banner">
                     <i class="fas ${iconCls}"></i>
                     <span class="file-ext-badge">${extLabel}</span>
                 </div>`;
-            actionBtnHTML = `<a href="${mediaUrl}" target="_blank" rel="noopener noreferrer" class="btn-card-action"><i class="fas fa-external-link-alt"></i> Buka / Unduh File</a>`;
+            actionBtnHTML = `<a href="${mediaUrl}" target="_blank" rel="noopener noreferrer" class="btn-card-action"><i class="fas fa-external-link-alt"></i> ${isFolder ? 'Buka Folder Drive' : 'Buka / Unduh File'}</a>`;
         }
 
         grid.innerHTML += `
@@ -840,6 +983,10 @@ window.toggleFormInputs = toggleFormInputs;
 window.openPreview = openPreview;
 window.closePreview = closePreview;
 window.setTeacherFilter = setTeacherFilter;
+window.renameAllSidebarLabel = renameAllSidebarLabel;
+window.addSidebarColumn = addSidebarColumn;
+window.renameSidebarColumn = renameSidebarColumn;
+window.deleteSidebarColumn = deleteSidebarColumn;
 
 function init() {
     injectLoginModal();

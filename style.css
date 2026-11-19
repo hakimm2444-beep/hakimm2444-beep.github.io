@@ -349,11 +349,11 @@ input, button, textarea, select {
 }
 
 /* =========================================================================
-   LAYOUT GALERI DENGAN SIDEBAR FILTER GURU
+   LAYOUT GALERI DENGAN SIDEBAR FILTER GURU (EDITABLE & CUSTOMIZABLE)
    ========================================================================= */
 .gallery-layout {
     display: grid;
-    grid-template-columns: 245px 1fr;
+    grid-template-columns: 265px 1fr;
     gap: 24px;
     align-items: start;
 }
@@ -383,13 +383,20 @@ input, button, textarea, select {
     gap: 8px;
 }
 
+.sidebar-item-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
 .sidebar-btn {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 10px 13px;
+    gap: 8px;
+    padding: 10px 12px;
     border-radius: 12px;
     border: 1px solid transparent;
     background: rgba(255, 255, 255, 0.06);
@@ -434,6 +441,61 @@ input, button, textarea, select {
 
 .sidebar-btn.active .sidebar-badge {
     background: rgba(5, 8, 16, 0.2);
+}
+
+.sidebar-mini-actions {
+    display: none;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+body.edit-mode .sidebar-mini-actions {
+    display: flex;
+}
+
+.btn-sidebar-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--border-glass);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-main);
+    font-size: 11px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.btn-sidebar-icon:hover {
+    background: var(--accent);
+    color: #050810;
+}
+
+.btn-sidebar-icon.del:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.btn-add-sidebar-col {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1.5px dashed var(--accent);
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--accent);
+    font-size: 12.5px;
+    font-weight: 700;
+    gap: 7px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-add-sidebar-col:hover {
+    background: var(--accent);
+    color: #050810;
 }
 
 .gallery-main {
@@ -1122,8 +1184,7 @@ body.edit-mode .edit-toolbar {
         flex-direction: row;
         flex-wrap: wrap;
     }
-    .sidebar-btn {
-        width: auto;
+    .sidebar-item-row {
         flex: 1 1 auto;
     }
 }
