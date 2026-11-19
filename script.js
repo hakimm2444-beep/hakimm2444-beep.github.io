@@ -68,7 +68,6 @@ let projectItems = [];
 let isEditMode = false;
 let currentUser = null;
 let targetIconEl = null;
-let mouse = { x: null, y: null };
 
 // =========================================================================
 // 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA (TIKTOK / YT / DRIVE)
@@ -696,7 +695,7 @@ function showToast(msg) {
 }
 
 // =========================================================================
-// 9. MODAL IKON & ANIMASI PARTIKEL
+// 9. MODAL IKON & ANIMASI SCROLL + EFEK KETIK (TANPA PARTIKEL)
 // =========================================================================
 function renderIconModal() {
     const grid = document.getElementById("icon-grid");
@@ -722,69 +721,6 @@ function initAnimations() {
         });
     }, { threshold: 0.1 });
     document.querySelectorAll(".reveal").forEach(el => revealObserver.observe(el));
-
-    const canvas = document.getElementById("network-canvas");
-    const hero = document.getElementById("beranda");
-    if (canvas && hero) {
-        const ctx = canvas.getContext("2d");
-        let particles = [];
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = hero.offsetHeight;
-        }
-        window.addEventListener("resize", resizeCanvas);
-        resizeCanvas();
-
-        window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-        window.addEventListener("touchmove", e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
-        window.addEventListener("touchend", () => { mouse.x = null; mouse.y = null; });
-
-        class Particle {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.vx = (Math.random() - 0.5) * 1.4;
-                this.vy = (Math.random() - 0.5) * 1.4;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-            }
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-                ctx.fillStyle = (themes[profileData.themeIdx] || themes[0]).hex;
-                ctx.fill();
-            }
-        }
-
-        for (let i = 0; i < 45; i++) particles.push(new Particle());
-
-        function animateCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
-                if (mouse.x != null) {
-                    const dx = mouse.x - particles[i].x;
-                    const dy = mouse.y - particles[i].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 130) {
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(mouse.x, mouse.y);
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - dist / 130})`;
-                        ctx.stroke();
-                    }
-                }
-            }
-            requestAnimationFrame(animateCanvas);
-        }
-        animateCanvas();
-    }
 
     let charIdx = 0;
     let isDel = false;
