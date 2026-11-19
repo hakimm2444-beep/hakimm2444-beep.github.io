@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hkmmz Portofolio | TJKT</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -27,6 +27,11 @@
             <li><a href="#kontak">Kontak</a></li>
         </ul>
     </nav>
+
+    <!-- Hero Section -->
+    <header id="beranda" class="hero">
+        <div id="hero-bg" class="hero-bg"></div>
+        <div class="hero-overlay"></div>
 
         <button class="edit-only btn-floating-top" onclick="document.getElementById('input-bg').click()">
             <i class="fas fa-image"></i> Unggah Latar Belakang
@@ -115,17 +120,38 @@
         </div>
     </section>
 
-    <!-- Proyek, Video & File -->
+    <!-- Proyek, Video & File + Sidebar Pemilah Tugas Guru -->
     <section id="proyek" class="section">
         <div class="container">
             <div class="section-header reveal">
                 <span class="section-tag">// 03. GALERI, VIDEO & DOKUMEN</span>
                 <h2 class="editable" data-key="titleProject">Dokumentasi Praktikum & File</h2>
                 <button class="edit-only btn-primary" style="margin-top: 15px;" onclick="openProjectModal()">
-                    <i class="fas fa-plus"></i> Tambah Gambar / Video / File
+                    <i class="fas fa-plus"></i> Tambah Tugas / Gambar / Video / File
                 </button>
             </div>
-            <div class="projects-grid reveal" id="projects-grid"></div>
+
+            <div class="gallery-layout reveal">
+                <!-- Sidebar Filter Guru -->
+                <aside class="glass-card teacher-sidebar">
+                    <div class="sidebar-header">
+                        <i class="fas fa-chalkboard-user"></i>
+                        <span>Filter Tugas Guru</span>
+                    </div>
+                    <div class="sidebar-list" id="teacher-filter-list">
+                        <!-- Tombol filter guru dirender otomatis -->
+                    </div>
+                </aside>
+
+                <!-- Area Kartu Galeri -->
+                <div class="gallery-main">
+                    <div class="active-filter-bar" id="active-filter-bar">
+                        <span>Menampilkan: <strong id="current-filter-label">Semua Tugas</strong></span>
+                        <span class="count-pill" id="current-filter-count">0 item</span>
+                    </div>
+                    <div class="projects-grid" id="projects-grid"></div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -167,19 +193,24 @@
         </div>
     </div>
 
-    <!-- Modal Tambah Karya (Unggah Foto Langsung / Video / File) -->
+    <!-- Modal Tambah Karya (Unggah Foto Langsung / Video / File + Nama Guru) -->
     <div id="modal-proyek" class="modal">
         <div class="modal-content glass-card">
             <div class="modal-header">
-                <h3><i class="fas fa-folder-plus"></i> Tambah Konten Baru</h3>
+                <h3><i class="fas fa-folder-plus"></i> Tambah Konten / Tugas Baru</h3>
                 <button class="close-modal" onclick="this.closest('.modal').classList.remove('active')">&times;</button>
             </div>
             <form id="form-proyek">
+                <label>Nama Guru Pengampu / Pemberi Tugas</label>
+                <input type="text" id="proj-teacher" list="teacher-suggestions" placeholder="Contoh: Pak Budi / Bu Siti / Mandiri" required>
+                <datalist id="teacher-suggestions"></datalist>
+                <small class="form-help">Nama guru otomatis muncul di sidebar kiri untuk memilah tugas.</small>
+
                 <label>Jenis Konten</label>
                 <select id="proj-type" onchange="toggleFormInputs()">
                     <option value="image-file">Unggah Foto Langsung (Dari Galeri / Laptop)</option>
                     <option value="image-url">Link Gambar HD (Google Drive / Imgur)</option>
-                    <option value="video">Video (YouTube / Google Drive / MP4)</option>
+                    <option value="video">Video (TikTok / YouTube / Google Drive / MP4)</option>
                     <option value="file">File Dokumen / Konfigurasi (PDF, PKT, RSC, ZIP, DOCX)</option>
                 </select>
 
@@ -203,10 +234,10 @@
                     <input type="text" id="proj-ext" placeholder="Contoh: PDF, PKT (Packet Tracer), RSC, ZIP">
                 </div>
 
-                <label>Judul Karya / File</label>
+                <label>Judul Karya / Tugas</label>
                 <input type="text" id="proj-title" placeholder="Contoh: Konfigurasi VLAN & Hotspot MikroTik" required>
 
-                <label>Kategori / Tag</label>
+                <label>Mata Pelajaran / Tag</label>
                 <input type="text" id="proj-tag" placeholder="Contoh: MIKROTIK / LINUX / IOT" required>
 
                 <label>Deskripsi</label>
@@ -225,7 +256,10 @@
             <button class="close-preview-btn" onclick="closePreview()">&times;</button>
             <div id="preview-media-container"></div>
             <div class="preview-caption">
-                <span id="preview-tag" class="project-tag"></span>
+                <div class="preview-badges">
+                    <span id="preview-tag" class="project-tag"></span>
+                    <span id="preview-teacher" class="teacher-pill"></span>
+                </div>
                 <h3 id="preview-title"></h3>
                 <p id="preview-desc"></p>
             </div>

@@ -65,12 +65,13 @@ const defaultProfile = {
 
 let profileData = structuredClone(defaultProfile);
 let projectItems = [];
+let activeTeacherFilter = "ALL";
 let isEditMode = false;
 let currentUser = null;
 let targetIconEl = null;
 
 // =========================================================================
-// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA (TIKTOK / YT / DRIVE)
+// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA
 // =========================================================================
 function processHighQualityImage(file, maxW, quality, callback) {
     const reader = new FileReader();
@@ -116,31 +117,21 @@ function getDirectImageUrl(url) {
 
 function getEmbedVideoInfo(url) {
     const cleanUrl = url.trim();
-
-    // 1. YouTube (watch, youtu.be, shorts, embed)
     const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
         return { kind: "iframe", src: `https://www.youtube.com/embed/${ytMatch[1]}` };
     }
-
-    // 2. TikTok URL Penuh (https://www.tiktok.com/@username/video/1234567890123456789)
     const tiktokMatch = cleanUrl.match(/tiktok\.com\/.*\/video\/(\d+)/);
     if (tiktokMatch) {
         return { kind: "iframe", src: `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}` };
     }
-
-    // 3. Link Pendek TikTok (vt.tiktok.com / vm.tiktok.com)
     if (cleanUrl.includes("tiktok.com")) {
         return { kind: "external-video", src: cleanUrl };
     }
-
-    // 4. Google Drive Video
     const driveId = extractDriveId(cleanUrl);
     if (driveId) {
         return { kind: "iframe", src: `https://drive.google.com/file/d/${driveId}/preview` };
     }
-
-    // 5. Direct MP4 / WebM
     return { kind: "video", src: cleanUrl };
 }
 
@@ -161,10 +152,11 @@ function getFileIcon(ext) {
 function initRealtimeSync() {
     if (!isFirebaseReady) {
         renderUI();
+        renderTeacherSidebar();
+        renderProjects();
         return;
     }
 
-    // 1. Sinkronisasi Profil & Pengaturan Teks (portfolio/main)
     onSnapshot(doc(firestore, "portfolio", "main"), (docSnap) => {
         if (docSnap.exists()) {
             const cloudData = docSnap.data();
@@ -179,17 +171,17 @@ function initRealtimeSync() {
         }
         renderUI();
     }, (err) => {
-        console.error("Gagal membaca profil dari Firestore:", err);
+        console.error("Gagal membaca profil:", err);
         renderUI();
     });
 
-    // 2. Sinkronisasi Koleksi Karya & File Tanpa Batas Jumlah (portfolio/main/items)
     const itemsQuery = query(collection(firestore, "portfolio", "main", "items"), orderBy("createdAt", "desc"));
     onSnapshot(itemsQuery, (querySnap) => {
         projectItems = [];
         querySnap.forEach((docItem) => {
             projectItems.push({ docId: docItem.id, ...docItem.data() });
         });
+        renderTeacherSidebar();
         renderProjects();
     }, (err) => {
         console.error("Gagal membaca daftar karya:", err);
@@ -202,11 +194,9 @@ function renderUI() {
     const profileImg = document.getElementById("profile-img");
     if (profileImg) profileImg.src = profileData.avatar || defaultAvatar;
 
-    // Sinkronisasi Background Frosted Glass ke seluruh layar
     const heroBg = document.getElementById("hero-bg");
-    if (heroBg) {
-        heroBg.style.backgroundImage = "none";
-    }
+    if (heroBg) heroBg.style.backgroundImage = "none";
+
     if (profileData.bg) {
         document.body.style.backgroundImage = `linear-gradient(180deg, rgba(6, 10, 20, 0.32) 0%, rgba(6, 10, 20, 0.55) 100%), url("${profileData.bg}")`;
     } else {
@@ -252,7 +242,71 @@ function cycleTheme() {
 }
 
 // =========================================================================
-// 5. SIMPAN PROFIL & SIMPAN KARYA SECARA TERPISAH (ANTI-HILANG)
+// 5. SIDEBAR FILTER GURU (OTOMATIS MEMILAH TUGAS PER GURU)
+// =========================================================================
+function normalizeTeacherName(raw) {
+    const clean = (raw || "").trim();
+    return clean !== "" ? clean : "Umum / Mandiri";
+}
+
+function renderTeacherSidebar() {
+    const listEl = document.getElementById("teacher-filter-list");
+    const datalistEl = document.getElementById("teacher-suggestions");
+    if (!listEl) return;
+
+    // Hitung jumlah tugas per guru (case-insensitive grouping)
+    const teacherMap = new Map();
+    projectItems.forEach(item => {
+        const name = normalizeTeacherName(item.teacher);
+        const key = name.toLowerCase();
+        if (!teacherMap.has(key)) {
+            teacherMap.set(key, { label: name, count: 0 });
+        }
+        teacherMap.get(key).count += 1;
+    });
+
+    // Reset filter jika guru yang sedang dipilih sudah dihapus semua tugasnya
+    if (activeTeacherFilter !== "ALL" && !teacherMap.has(activeTeacherFilter.toLowerCase())) {
+        activeTeacherFilter = "ALL";
+    }
+
+    // Render tombol "Semua Tugas"
+    let html = `
+        <button class="sidebar-btn ${activeTeacherFilter === "ALL" ? "active" : ""}" onclick="setTeacherFilter('ALL')">
+            <span class="sidebar-btn-label"><i class="fas fa-layer-group"></i> Semua Tugas</span>
+            <span class="sidebar-badge">${projectItems.length}</span>
+        </button>`;
+
+    // Render tombol untuk masing-masing guru
+    teacherMap.forEach((info) => {
+        const isActive = activeTeacherFilter.toLowerCase() === info.label.toLowerCase();
+        const escapedLabel = info.label.replace(/'/g, "\\'");
+        html += `
+            <button class="sidebar-btn ${isActive ? "active" : ""}" onclick="setTeacherFilter('${escapedLabel}')">
+                <span class="sidebar-btn-label"><i class="fas fa-user-tie"></i> ${info.label}</span>
+                <span class="sidebar-badge">${info.count}</span>
+            </button>`;
+    });
+
+    listEl.innerHTML = html;
+
+    // Isi saran autocomplete pada form tambah tugas
+    if (datalistEl) {
+        datalistEl.innerHTML = "";
+        teacherMap.forEach((info) => {
+            datalistEl.innerHTML += `<option value="${info.label}">`;
+        });
+    }
+}
+
+function setTeacherFilter(teacherName) {
+    activeTeacherFilter = teacherName;
+    renderTeacherSidebar();
+    renderProjects();
+}
+
+// =========================================================================
+// 6. SIMPAN PROFIL & SIMPAN KARYA SECARA TERPISAH
 // =========================================================================
 async function saveProfileData(notify = true) {
     if (!isFirebaseReady || !currentUser) {
@@ -331,7 +385,7 @@ async function resetData() {
 }
 
 // =========================================================================
-// 6. LOGIN ADMIN & MODE EDIT
+// 7. LOGIN ADMIN & MODE EDIT
 // =========================================================================
 function injectLoginModal() {
     if (document.getElementById("modal-admin-login")) return;
@@ -428,10 +482,13 @@ async function logoutAdmin() {
 }
 
 // =========================================================================
-// 7. FORM UNGGAH KONTEN (FOTO LANGSUNG / LINK HD / TIKTOK / YT / FILE)
+// 8. FORM UNGGAH KONTEN (FOTO LANGSUNG / LINK HD / TIKTOK / YT / FILE)
 // =========================================================================
 function openProjectModal() {
     document.getElementById("form-proyek").reset();
+    if (activeTeacherFilter !== "ALL") {
+        document.getElementById("proj-teacher").value = activeTeacherFilter;
+    }
     toggleFormInputs();
     document.getElementById("modal-proyek").classList.add("active");
 }
@@ -513,6 +570,7 @@ function setupUploadListeners() {
         submitBtn.disabled = true;
         submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan ke Cloud...`;
 
+        const teacher = normalizeTeacherName(document.getElementById("proj-teacher").value);
         const type = document.getElementById("proj-type").value;
         const title = document.getElementById("proj-title").value.trim();
         const tag = document.getElementById("proj-tag").value.trim().toUpperCase();
@@ -530,6 +588,7 @@ function setupUploadListeners() {
                 const newItem = {
                     id: now,
                     createdAt: now,
+                    teacher,
                     type: "image",
                     title,
                     tag,
@@ -553,6 +612,7 @@ function setupUploadListeners() {
             const newItem = {
                 id: now,
                 createdAt: now,
+                teacher,
                 type: normalizedType,
                 title,
                 tag,
@@ -573,20 +633,35 @@ function setupUploadListeners() {
 }
 
 // =========================================================================
-// 8. RENDER KARTU GALERI & PREVIEW FULLSCREEN
+// 9. RENDER KARTU GALERI TERFILTER & PREVIEW FULLSCREEN
 // =========================================================================
 function renderProjects() {
     const grid = document.getElementById("projects-grid");
+    const filterLabelEl = document.getElementById("current-filter-label");
+    const filterCountEl = document.getElementById("current-filter-count");
     if (!grid) return;
+
+    const filteredItems = activeTeacherFilter === "ALL"
+        ? projectItems
+        : projectItems.filter(p => normalizeTeacherName(p.teacher).toLowerCase() === activeTeacherFilter.toLowerCase());
+
+    if (filterLabelEl) {
+        filterLabelEl.textContent = activeTeacherFilter === "ALL" ? "Semua Tugas" : `Tugas: ${activeTeacherFilter}`;
+    }
+    if (filterCountEl) {
+        filterCountEl.textContent = `${filteredItems.length} item`;
+    }
+
     grid.innerHTML = "";
 
-    if (projectItems.length === 0) {
-        grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 14px;">Belum ada dokumentasi yang diunggah.</p>`;
+    if (filteredItems.length === 0) {
+        grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 14px; padding: 30px 0;">Belum ada dokumentasi tugas untuk kategori ini.</p>`;
         return;
     }
 
-    projectItems.forEach(p => {
+    filteredItems.forEach(p => {
         const type = p.type || "image";
+        const teacherLabel = normalizeTeacherName(p.teacher);
         const mediaUrl = p.url || p.image || defaultProjImg;
         const descText = p.desc || "";
         let mediaHTML = "";
@@ -634,7 +709,10 @@ function renderProjects() {
                     ${mediaHTML}
                 </div>
                 <div class="project-body">
-                    <span class="project-tag">${p.tag}</span>
+                    <div class="card-badges-row">
+                        <span class="project-tag">${p.tag}</span>
+                        <span class="teacher-pill"><i class="fas fa-user-tie"></i> ${teacherLabel}</span>
+                    </div>
                     <h3 class="project-title">${p.title}</h3>
                     <p class="project-desc">${descText}</p>
                     <div class="project-footer-actions">
@@ -667,6 +745,7 @@ function openPreview(id) {
     }
 
     document.getElementById("preview-tag").textContent = item.tag;
+    document.getElementById("preview-teacher").innerHTML = `<i class="fas fa-user-tie"></i> ${normalizeTeacherName(item.teacher)}`;
     document.getElementById("preview-title").textContent = item.title;
     document.getElementById("preview-desc").textContent = item.desc || "";
     document.getElementById("modal-preview").classList.add("active");
@@ -695,7 +774,7 @@ function showToast(msg) {
 }
 
 // =========================================================================
-// 9. MODAL IKON & ANIMASI SCROLL + EFEK KETIK (TANPA PARTIKEL)
+// 10. MODAL IKON & ANIMASI SCROLL + EFEK KETIK
 // =========================================================================
 function renderIconModal() {
     const grid = document.getElementById("icon-grid");
@@ -748,7 +827,7 @@ function initAnimations() {
 }
 
 // =========================================================================
-// 10. INISIALISASI GLOBAL
+// 11. INISIALISASI GLOBAL
 // =========================================================================
 window.toggleEditMode = toggleEditMode;
 window.cycleTheme = cycleTheme;
@@ -760,6 +839,7 @@ window.openProjectModal = openProjectModal;
 window.toggleFormInputs = toggleFormInputs;
 window.openPreview = openPreview;
 window.closePreview = closePreview;
+window.setTeacherFilter = setTeacherFilter;
 
 function init() {
     injectLoginModal();
