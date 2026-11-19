@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { 
-    getFirestore, doc, getDoc, setDoc, deleteDoc, 
-    collection, getDocs, query, orderBy, onSnapshot 
+    getFirestore, doc, setDoc, deleteDoc, 
+    collection, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // =========================================================================
@@ -34,15 +34,15 @@ try {
 // =========================================================================
 // 2. DATA DEFAULT & TEMA
 // =========================================================================
-const defaultAvatar = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#1e293b"/><circle cx="100" cy="75" r="40" fill="#06b6d4"/><path d="M30 190 C30 130, 170 130, 170 190" fill="#06b6d4"/></svg>`);
-const defaultProjImg = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><rect width="640" height="360" fill="#0f172a"/><circle cx="320" cy="180" r="28" fill="#1e293b" stroke="#06b6d4" stroke-width="3"/><path d="M308 180 L332 180 M320 168 L320 192" stroke="#06b6d4" stroke-width="3"/></svg>`);
+const defaultAvatar = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#1e293b"/><circle cx="100" cy="75" r="40" fill="#38bdf8"/><path d="M30 190 C30 130, 170 130, 170 190" fill="#38bdf8"/></svg>`);
+const defaultProjImg = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><rect width="640" height="360" fill="#0f172a"/><circle cx="320" cy="180" r="28" fill="#1e293b" stroke="#38bdf8" stroke-width="3"/><path d="M308 180 L332 180 M320 168 L320 192" stroke="#38bdf8" stroke-width="3"/></svg>`);
 
 const themes = [
-    { name: "Cyan Network", hex: "#06b6d4", glow: "rgba(6, 182, 212, 0.35)" },
-    { name: "Matrix Green", hex: "#10b981", glow: "rgba(16, 185, 129, 0.35)" },
-    { name: "Cisco Blue", hex: "#3b82f6", glow: "rgba(59, 130, 246, 0.35)" },
-    { name: "Fiber Orange", hex: "#f59e0b", glow: "rgba(245, 158, 11, 0.35)" },
-    { name: "Hacker Purple", hex: "#a855f7", glow: "rgba(168, 85, 247, 0.35)" }
+    { name: "Sky Glass", hex: "#38bdf8", glow: "rgba(56, 189, 248, 0.45)" },
+    { name: "Sakura Pink", hex: "#f472b6", glow: "rgba(244, 114, 182, 0.45)" },
+    { name: "Emerald Pond", hex: "#34d399", glow: "rgba(52, 211, 153, 0.45)" },
+    { name: "Amber Sun", hex: "#fbbf24", glow: "rgba(251, 191, 36, 0.45)" },
+    { name: "Lavender Mist", hex: "#c084fc", glow: "rgba(192, 132, 252, 0.45)" }
 ];
 
 const iconList = [
@@ -71,7 +71,7 @@ let targetIconEl = null;
 let mouse = { x: null, y: null };
 
 // =========================================================================
-// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA
+// 3. PEMROSESAN GAMBAR TAJAM (HD) & KONVERTER URL MEDIA (TIKTOK / YT / DRIVE)
 // =========================================================================
 function processHighQualityImage(file, maxW, quality, callback) {
     const reader = new FileReader();
@@ -117,21 +117,31 @@ function getDirectImageUrl(url) {
 
 function getEmbedVideoInfo(url) {
     const cleanUrl = url.trim();
+
+    // 1. YouTube (watch, youtu.be, shorts, embed)
     const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
         return { kind: "iframe", src: `https://www.youtube.com/embed/${ytMatch[1]}` };
     }
+
+    // 2. TikTok URL Penuh (https://www.tiktok.com/@username/video/1234567890123456789)
     const tiktokMatch = cleanUrl.match(/tiktok\.com\/.*\/video\/(\d+)/);
     if (tiktokMatch) {
         return { kind: "iframe", src: `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}` };
     }
+
+    // 3. Link Pendek TikTok (vt.tiktok.com / vm.tiktok.com)
     if (cleanUrl.includes("tiktok.com")) {
         return { kind: "external-video", src: cleanUrl };
     }
+
+    // 4. Google Drive Video
     const driveId = extractDriveId(cleanUrl);
     if (driveId) {
         return { kind: "iframe", src: `https://drive.google.com/file/d/${driveId}/preview` };
     }
+
+    // 5. Direct MP4 / WebM
     return { kind: "video", src: cleanUrl };
 }
 
@@ -193,9 +203,15 @@ function renderUI() {
     const profileImg = document.getElementById("profile-img");
     if (profileImg) profileImg.src = profileData.avatar || defaultAvatar;
 
+    // Sinkronisasi Background Frosted Glass ke seluruh layar
     const heroBg = document.getElementById("hero-bg");
     if (heroBg) {
-        heroBg.style.backgroundImage = profileData.bg ? `url("${profileData.bg}")` : "none";
+        heroBg.style.backgroundImage = "none";
+    }
+    if (profileData.bg) {
+        document.body.style.backgroundImage = `linear-gradient(180deg, rgba(6, 10, 20, 0.32) 0%, rgba(6, 10, 20, 0.55) 100%), url("${profileData.bg}")`;
+    } else {
+        document.body.style.backgroundImage = `linear-gradient(180deg, rgba(6, 10, 20, 0.32) 0%, rgba(6, 10, 20, 0.55) 100%), url("bg.jpg")`;
     }
 
     if (!isEditMode) {
@@ -308,7 +324,7 @@ async function deleteProject(id) {
 
 async function resetData() {
     if (!currentUser) return;
-    if (confirm("Kembalikan teks profil, foto profil, dan tema ke pengaturan awal? (Galeri karya tidak ikut terhapus)")) {
+    if (confirm("Kembalikan teks profil, foto profil, background bawaan, dan tema ke pengaturan awal? (Galeri karya tidak ikut terhapus)")) {
         profileData = structuredClone(defaultProfile);
         renderUI();
         await saveProfileData(true);

@@ -1,11 +1,14 @@
 :root {
-    --bg-dark: #050810;
-    --bg-card: rgba(13, 19, 33, 0.82);
-    --border-glass: rgba(255, 255, 255, 0.1);
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent: #06b6d4;
-    --accent-glow: rgba(6, 182, 212, 0.35);
+    --bg-dark: #070b14;
+    /* Lapisan kaca buram (Frosted Glass) transparan dengan pantulan cahaya */
+    --glass-bg: rgba(12, 18, 32, 0.42);
+    --glass-bg-strong: rgba(12, 18, 32, 0.68);
+    --glass-highlight: rgba(255, 255, 255, 0.22);
+    --border-glass: rgba(255, 255, 255, 0.16);
+    --text-main: #ffffff;
+    --text-muted: #e2e8f0;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.45);
     --font-sans: 'Plus Jakarta Sans', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 }
@@ -19,6 +22,14 @@
 
 body {
     background-color: var(--bg-dark);
+    /* Background gambar full layar permanen (fixed) dengan lapisan gelap tipis agar teks tajam */
+    background-image:
+        linear-gradient(180deg, rgba(6, 10, 20, 0.32) 0%, rgba(6, 10, 20, 0.55) 100%),
+        url("bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--text-main);
     font-family: var(--font-sans);
     line-height: 1.6;
@@ -41,7 +52,7 @@ input, button, textarea, select {
     transform: translateY(0);
 }
 
-/* Navbar */
+/* Navbar Frosted Glass */
 .navbar {
     position: fixed;
     top: 14px;
@@ -49,14 +60,17 @@ input, button, textarea, select {
     transform: translateX(-50%);
     width: calc(100% - 28px);
     max-width: 1020px;
-    padding: 12px 20px;
+    padding: 12px 22px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(13, 19, 34, 0.85);
-    backdrop-filter: blur(16px);
+    background: rgba(12, 18, 32, 0.45);
+    backdrop-filter: blur(22px) saturate(165%);
+    -webkit-backdrop-filter: blur(22px) saturate(165%);
     border: 1px solid var(--border-glass);
-    border-radius: 16px;
+    border-top-color: var(--glass-highlight);
+    border-radius: 18px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
     z-index: 900;
 }
 
@@ -68,6 +82,7 @@ input, button, textarea, select {
     display: flex;
     align-items: center;
     gap: 8px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .nav-links {
@@ -77,14 +92,16 @@ input, button, textarea, select {
 }
 
 .nav-links a {
-    color: var(--text-muted);
+    color: var(--text-main);
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
+    opacity: 0.85;
     transition: 0.25s;
 }
 
 .nav-links a:hover {
+    opacity: 1;
     color: var(--accent);
 }
 
@@ -105,7 +122,7 @@ input, button, textarea, select {
     background-size: cover;
     background-position: center;
     z-index: 1;
-    opacity: 0.42;
+    opacity: 0.85;
 }
 
 #network-canvas {
@@ -120,23 +137,29 @@ input, button, textarea, select {
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, transparent 0%, var(--bg-dark) 100%);
+    background: radial-gradient(circle at center, transparent 25%, rgba(6, 10, 20, 0.45) 100%);
     z-index: 3;
     pointer-events: none;
 }
 
+/* Kartu Hero Frosted Glass */
 .hero-card {
     position: relative;
     z-index: 4;
     max-width: 650px;
     width: 100%;
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(170%);
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
     border: 1px solid var(--border-glass);
-    border-radius: 24px;
-    padding: 40px 24px;
+    border-top: 1px solid var(--glass-highlight);
+    border-left: 1px solid var(--glass-highlight);
+    border-radius: 26px;
+    padding: 42px 26px;
     text-align: center;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    box-shadow:
+        0 24px 50px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .status-badge {
@@ -145,7 +168,8 @@ input, button, textarea, select {
     gap: 8px;
     padding: 6px 14px;
     border-radius: 99px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
     border: 1px solid var(--border-glass);
     font-family: var(--font-mono);
     font-size: 11px;
@@ -158,7 +182,7 @@ input, button, textarea, select {
     height: 8px;
     background: #10b981;
     border-radius: 50%;
-    box-shadow: 0 0 8px #10b981;
+    box-shadow: 0 0 10px #10b981;
 }
 
 .avatar-wrapper {
@@ -173,9 +197,9 @@ input, button, textarea, select {
     height: 100%;
     object-fit: cover;
     border-radius: 50%;
-    border: 3px solid var(--accent);
-    box-shadow: 0 0 25px var(--accent-glow);
-    background: #1e293b;
+    border: 3px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    background: rgba(15, 23, 42, 0.6);
 }
 
 .btn-upload-avatar {
@@ -185,26 +209,29 @@ input, button, textarea, select {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     background: var(--accent);
     color: #050810;
     cursor: pointer;
     font-size: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .hero-card h1 {
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 800;
     margin-bottom: 6px;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 
 .role-prefix {
     font-family: var(--font-mono);
     color: var(--accent);
     font-size: 14px;
+    font-weight: 600;
     min-height: 24px;
     margin-bottom: 18px;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
 }
 
 .cursor {
@@ -217,7 +244,7 @@ input, button, textarea, select {
 
 .hero-bio {
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 14.5px;
     margin-bottom: 26px;
     line-height: 1.7;
 }
@@ -232,7 +259,7 @@ input, button, textarea, select {
 /* Tombol */
 .btn-primary, .btn-outline {
     padding: 12px 22px;
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
@@ -248,21 +275,27 @@ input, button, textarea, select {
 .btn-primary {
     background: var(--accent);
     color: #050810;
-    box-shadow: 0 4px 16px var(--accent-glow);
+    box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
 }
 
 .btn-outline {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
     color: var(--text-main);
     border: 1px solid var(--border-glass);
 }
 
 .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.2);
     border-color: var(--accent);
-    color: var(--accent);
 }
 
-/* Sections & Cards */
+/* Sections & Frosted Glass Cards */
 .section {
     padding: 75px 20px;
 }
@@ -278,30 +311,45 @@ input, button, textarea, select {
 }
 
 .section-tag {
+    display: inline-block;
     font-family: var(--font-mono);
     font-size: 12px;
+    font-weight: 600;
     color: var(--accent);
+    background: rgba(12, 18, 32, 0.55);
+    backdrop-filter: blur(14px);
+    padding: 4px 12px;
+    border-radius: 99px;
+    border: 1px solid var(--border-glass);
     letter-spacing: 1px;
 }
 
 .section-header h2 {
-    font-size: 26px;
-    margin-top: 6px;
+    font-size: 27px;
+    margin-top: 10px;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
 }
 
 .glass-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(16px);
+    background: var(--glass-bg);
+    backdrop-filter: blur(22px) saturate(165%);
+    -webkit-backdrop-filter: blur(22px) saturate(165%);
     border: 1px solid var(--border-glass);
-    border-radius: 18px;
+    border-top: 1px solid var(--glass-highlight);
+    border-left: 1px solid var(--glass-highlight);
+    border-radius: 20px;
     padding: 24px;
+    box-shadow:
+        0 14px 36px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
     transition: 0.3s;
 }
 
 .hover-tilt:hover {
     transform: translateY(-5px);
-    border-color: var(--accent);
-    box-shadow: 0 10px 30px var(--accent-glow);
+    background: rgba(16, 24, 42, 0.52);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
 }
 
 .about-grid, .skills-grid {
@@ -326,14 +374,14 @@ input, button, textarea, select {
     color: var(--text-muted);
 }
 
-/* Terminal Box */
+/* Terminal Box Frosted Glass */
 .terminal-box {
     padding: 0;
     overflow: hidden;
 }
 
 .terminal-header {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.08);
     padding: 12px 16px;
     display: flex;
     align-items: center;
@@ -375,6 +423,7 @@ input, button, textarea, select {
     font-size: 32px;
     color: var(--accent);
     margin-bottom: 14px;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
 }
 
 .skill-card h3 {
@@ -387,18 +436,17 @@ input, button, textarea, select {
     color: var(--text-muted);
 }
 
-/* Projects, Video & File Cards (Tajam & Tanpa Distorsi) */
+/* Projects, Video & File Cards */
 .project-card {
     padding: 0;
     overflow: hidden;
     position: relative;
     display: flex;
     flex-direction: column;
-    border-color: var(--border-glass);
 }
 
 .project-card:hover {
-    border-color: var(--accent);
+    border-color: rgba(255, 255, 255, 0.35);
     transform: translateY(-4px);
 }
 
@@ -406,7 +454,7 @@ input, button, textarea, select {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: #090d16;
+    background: rgba(7, 11, 20, 0.65);
     border-bottom: 1px solid var(--border-glass);
     overflow: hidden;
     display: flex;
@@ -444,7 +492,7 @@ input, button, textarea, select {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(6, 182, 212, 0.12));
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.55), rgba(56, 189, 248, 0.18));
     padding: 20px;
     text-align: center;
 }
@@ -460,7 +508,7 @@ input, button, textarea, select {
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.14);
     color: var(--text-main);
     letter-spacing: 1px;
 }
@@ -469,14 +517,14 @@ input, button, textarea, select {
     position: absolute;
     top: 10px;
     left: 10px;
-    background: rgba(5, 8, 16, 0.85);
-    backdrop-filter: blur(6px);
+    background: rgba(12, 18, 32, 0.65);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border-glass);
     color: var(--text-main);
     font-family: var(--font-mono);
     font-size: 10px;
     padding: 4px 9px;
-    border-radius: 6px;
+    border-radius: 8px;
     z-index: 2;
     pointer-events: none;
 }
@@ -493,10 +541,11 @@ input, button, textarea, select {
     width: fit-content;
     font-family: var(--font-mono);
     font-size: 11px;
+    font-weight: 600;
     color: var(--accent);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     margin-bottom: 10px;
 }
 
@@ -525,7 +574,7 @@ input, button, textarea, select {
 .btn-card-action {
     flex: 1;
     padding: 9px 12px;
-    border-radius: 9px;
+    border-radius: 10px;
     font-size: 12px;
     font-weight: 700;
     text-decoration: none;
@@ -533,7 +582,7 @@ input, button, textarea, select {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.12);
     color: var(--text-main);
     border: 1px solid var(--border-glass);
     cursor: pointer;
@@ -566,11 +615,13 @@ input, button, textarea, select {
     position: relative;
     max-width: 920px;
     width: 100%;
-    background: #0b1120;
-    border: 1px solid var(--accent);
-    border-radius: 18px;
+    background: rgba(12, 18, 32, 0.78);
+    backdrop-filter: blur(26px) saturate(160%);
+    -webkit-backdrop-filter: blur(26px) saturate(160%);
+    border: 1px solid var(--glass-highlight);
+    border-radius: 22px;
     overflow: hidden;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
 }
 
 .close-preview-btn {
@@ -580,8 +631,8 @@ input, button, textarea, select {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid var(--border-glass);
+    background: rgba(0, 0, 0, 0.65);
     color: white;
     font-size: 24px;
     cursor: pointer;
@@ -592,7 +643,7 @@ input, button, textarea, select {
     width: 100%;
     max-height: 70vh;
     object-fit: contain;
-    background: #050810;
+    background: rgba(5, 8, 16, 0.75);
     display: block;
 }
 
@@ -620,12 +671,19 @@ input, button, textarea, select {
     white-space: pre-line;
 }
 
-/* Footer & Kontak */
+/* Footer Frosted Glass */
 .footer {
     border-top: 1px solid var(--border-glass);
     padding: 65px 20px 110px;
     text-align: center;
-    background: rgba(5, 8, 16, 0.92);
+    background: rgba(10, 15, 28, 0.52);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.footer h2 {
+    margin-top: 10px;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
 }
 
 .footer-hint {
@@ -662,17 +720,18 @@ input, button, textarea, select {
     margin-left: 4px;
 }
 
-/* Modal Form */
+/* Modal Form Frosted Glass */
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.88);
+    background: rgba(4, 7, 15, 0.65);
     z-index: 1200;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     overflow-y: auto;
 }
 
@@ -683,8 +742,10 @@ input, button, textarea, select {
 .modal-content {
     width: 100%;
     max-width: 450px;
-    background: #0f172a;
-    border-color: var(--accent);
+    background: rgba(14, 21, 38, 0.72);
+    backdrop-filter: blur(26px) saturate(170%);
+    -webkit-backdrop-filter: blur(26px) saturate(170%);
+    border: 1px solid var(--glass-highlight);
     max-height: 90vh;
     overflow-y: auto;
 }
@@ -713,12 +774,12 @@ input, button, textarea, select {
 }
 
 .icon-btn {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid var(--border-glass);
     color: white;
     font-size: 20px;
     padding: 14px 0;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     transition: 0.2s;
 }
@@ -739,16 +800,22 @@ form label {
 form input, form select, form textarea {
     width: 100%;
     padding: 11px 12px;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid var(--border-glass);
-    background: #1e293b;
+    background: rgba(255, 255, 255, 0.08);
     color: white;
     font-size: 13.5px;
+}
+
+form select option {
+    background: #0f172a;
+    color: white;
 }
 
 form input:focus, form select:focus, form textarea:focus {
     outline: none;
     border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .form-help {
@@ -776,15 +843,15 @@ body.edit-mode .btn-delete-proj {
 
 body.edit-mode .editable {
     outline: 1.5px dashed var(--accent);
-    background: rgba(6, 182, 212, 0.1);
-    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.15);
+    border-radius: 6px;
     padding: 2px 5px;
     cursor: text;
 }
 
 body.edit-mode .edit-icon {
     outline: 1.5px dashed var(--accent);
-    background: rgba(6, 182, 212, 0.2);
+    background: rgba(56, 189, 248, 0.22);
     border-radius: 6px;
     cursor: pointer;
     padding: 4px;
@@ -795,11 +862,12 @@ body.edit-mode .edit-icon {
     top: 84px;
     right: 20px;
     z-index: 5;
-    background: rgba(15, 23, 42, 0.92);
+    background: rgba(12, 18, 32, 0.65);
+    backdrop-filter: blur(16px);
     color: white;
-    border: 1px solid var(--accent);
+    border: 1px solid var(--glass-highlight);
     padding: 8px 14px;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 12px;
     gap: 6px;
     cursor: pointer;
@@ -834,13 +902,15 @@ body.edit-mode .floating-edit-btn {
     bottom: 0;
     left: 0;
     width: 100%;
-    background: rgba(13, 19, 33, 0.98);
+    background: rgba(12, 18, 32, 0.82);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
     padding: 12px 16px;
     display: none;
     justify-content: space-between;
     align-items: center;
     z-index: 1050;
-    border-top: 1px solid var(--accent);
+    border-top: 1px solid var(--glass-highlight);
 }
 
 body.edit-mode .edit-toolbar {
@@ -860,11 +930,11 @@ body.edit-mode .edit-toolbar {
 }
 
 .tool-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.14);
     color: white;
-    border: none;
+    border: 1px solid var(--border-glass);
     padding: 9px 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -876,11 +946,12 @@ body.edit-mode .edit-toolbar {
 .tool-btn.save {
     background: var(--accent);
     color: #050810;
+    border: none;
 }
 
 .tool-btn.danger {
-    background: rgba(239, 68, 68, 0.22);
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.28);
+    color: #fecaca;
 }
 
 .toast {
@@ -906,6 +977,9 @@ body.edit-mode .edit-toolbar {
 }
 
 @media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+    }
     .nav-links {
         display: none;
     }
